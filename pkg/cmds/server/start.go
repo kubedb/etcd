@@ -32,6 +32,7 @@ func NewEtcdServerOptions(out, errOut io.Writer) *EtcdServerOptions {
 		StdErr:             errOut,
 	}
 	o.RecommendedOptions.Etcd = nil
+	o.RecommendedOptions.Admission = nil
 
 	return o
 }
