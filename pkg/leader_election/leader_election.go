@@ -95,7 +95,9 @@ func RunLeaderElection() {
 					os.Exit(1)
 				},
 				OnNewLeader: func(identity string) {
+					fmt.Println("New leader.................")
 					statefulSet, err := kubeClient.AppsV1().StatefulSets(namespace).Get(statefulSetName, metav1.GetOptions{})
+					fmt.Println("identity.......................", err)
 					if err != nil {
 						log.Fatalln(err)
 					}

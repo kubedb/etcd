@@ -127,7 +127,7 @@ func (c *Controller) createPeerService(etcd *api.Etcd) (kutil.VerbType, error) {
 		in.Labels = etcd.OffshootLabels()
 		in.Spec.Ports = upsertPeerServicePort(in, etcd)
 		in.Spec.Selector = etcd.OffshootLabels()
-		in.Spec.ClusterIP = core.ClusterIPNone
+		//in.Spec.ClusterIP = core.ClusterIPNone
 		return in
 	})
 	return ok, err

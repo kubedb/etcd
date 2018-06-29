@@ -117,7 +117,7 @@ func (a *EtcdValidator) Admit(req *admission.AdmissionRequest) *admission.Admiss
 }
 
 var (
-	etcdVersions = sets.NewString("3.2.12")
+	etcdVersions = sets.NewString("3.2.13")
 )
 
 // ValidateEtcd checks if the object satisfies all the requirements.

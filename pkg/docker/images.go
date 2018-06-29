@@ -7,7 +7,7 @@ import (
 const (
 	ImageKubedbOperator = "operator"
 	ImageEtcdOperator   = "etcd-operator"
-	ImageEtcd           = "sanjid/etcd"
+	ImageEtcd           = "etcd"
 	ImageEtcdTools      = "etcd-tools"
 )
 

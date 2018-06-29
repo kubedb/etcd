@@ -90,7 +90,7 @@ func (c *Controller) create(etcd *api.Etcd) error {
 	}
 
 	// ensure database StatefulSet
-	vt2, err := c.ensureStatefulSet(etcd)
+	vt2, err := c.ensureEtcdNode(etcd)
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func (c *Controller) ensureEtcdNode(etcd *api.Etcd) (kutil.VerbType, error) {
 	if err := c.ensureDatabaseSecret(etcd); err != nil {
 		return kutil.VerbUnchanged, err
 	}
-
+	fmt.Println(c.EnableRBAC, "..............................>>>>>>>>>>>>>>>>>>>>>>>")
 	if c.EnableRBAC {
 		fmt.Println("------------------------------------")
 		// Ensure ClusterRoles for database statefulsets

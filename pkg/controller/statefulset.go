@@ -252,6 +252,18 @@ func upsertDataVolume(statefulSet *apps.StatefulSet, etcd *api.Etcd) *apps.State
 func upsertEnv(statefulSet *apps.StatefulSet, etcd *api.Etcd) *apps.StatefulSet {
 	envList := []core.EnvVar{
 		{
+			Name: "NAMESPACE",
+			ValueFrom: &core.EnvVarSource{
+				FieldRef: &core.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
+			},
+		},
+		{
+			Name:  "PRIMARY_HOST",
+			Value: etcd.ServiceName(),
+		},
+		/*{
 			Name: "ETCD_INITDB_ROOT_USERNAME",
 			ValueFrom: &core.EnvVarSource{
 				SecretKeyRef: &core.SecretKeySelector{
@@ -272,7 +284,7 @@ func upsertEnv(statefulSet *apps.StatefulSet, etcd *api.Etcd) *apps.StatefulSet 
 					Key: KeyEtcdPassword,
 				},
 			},
-		},
+		},*/
 	}
 	for i, container := range statefulSet.Spec.Template.Spec.Containers {
 		if container.Name == api.ResourceSingularEtcd {
