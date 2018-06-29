@@ -25,7 +25,7 @@ func (c *Controller) ensureStatefulSet(etcd *api.Etcd) (kutil.VerbType, error) {
 	}
 
 	// Create statefulSet for Etcd database
-	statefulSet, vt, err := c.createStatefulSet(etcd)
+	statefulSet, vt, err := c.createStatefulSet(etcd, 1)
 	if err != nil {
 		return kutil.VerbUnchanged, err
 	}
@@ -74,7 +74,9 @@ func (c *Controller) checkStatefulSet(etcd *api.Etcd) error {
 	return nil
 }
 
-func (c *Controller) createStatefulSet(etcd *api.Etcd) (*apps.StatefulSet, kutil.VerbType, error) {
+func (c *Controller) createStatefulSet(
+	etcd *api.Etcd,
+	replicas int32) (*apps.StatefulSet, kutil.VerbType, error) {
 	statefulSetMeta := metav1.ObjectMeta{
 		Name:      etcd.OffshootName(),
 		Namespace: etcd.Namespace,
@@ -85,30 +87,53 @@ func (c *Controller) createStatefulSet(etcd *api.Etcd) (*apps.StatefulSet, kutil
 		return nil, kutil.VerbUnchanged, rerr
 	}
 
+	/*commands := fmt.Sprintf("/usr/local/bin/etcd --data-dir=%s --name=%s --initial-advertise-peer-urls=%s "+
+		"--listen-peer-urls=%s --listen-client-urls=%s --advertise-client-urls=%s "+
+		"--initial-cluster=%s --initial-cluster-state=%s",
+		"/var/lib/etcd", etcd.Name, etcd.PeerURL(), m.ListenPeerURL(), m.ListenClientURL(), m.ClientURL(), strings.Join(initialCluster, ","), state)
+	if m.SecurePeer {
+		commands += fmt.Sprintf(" --peer-client-cert-auth=true --peer-trusted-ca-file=%[1]s/peer-ca.crt --peer-cert-file=%[1]s/peer.crt --peer-key-file=%[1]s/peer.key", peerTLSDir)
+	}
+	if m.SecureClient {
+		commands += fmt.Sprintf(" --client-cert-auth=true --trusted-ca-file=%[1]s/server-ca.crt --cert-file=%[1]s/server.crt --key-file=%[1]s/server.key", serverTLSDir)
+	}
+	*/
+
 	return app_util.CreateOrPatchStatefulSet(c.Client, statefulSetMeta, func(in *apps.StatefulSet) *apps.StatefulSet {
 		in.ObjectMeta = core_util.EnsureOwnerReference(in.ObjectMeta, ref)
 		in.Labels = core_util.UpsertMap(in.Labels, etcd.StatefulSetLabels())
 		in.Annotations = core_util.UpsertMap(in.Annotations, etcd.StatefulSetAnnotations())
 
-		in.Spec.Replicas = types.Int32P(1)
+		in.Spec.Replicas = types.Int32P(replicas)
 		in.Spec.ServiceName = c.GoverningService
 		in.Spec.Template.Labels = in.Labels
 		in.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: in.Labels,
 		}
 
+		livenessProbe := newEtcdProbe(false)
+		readinessProbe := newEtcdProbe(false)
+		readinessProbe.InitialDelaySeconds = 1
+		readinessProbe.TimeoutSeconds = 5
+		readinessProbe.PeriodSeconds = 5
+		readinessProbe.FailureThreshold = 3
+
 		in.Spec.Template.Spec.Containers = core_util.UpsertContainer(in.Spec.Template.Spec.Containers, core.Container{
-			Name:  api.ResourceSingularEtcd,
-			Image: c.docker.GetImageWithTag(etcd),
+			Name:           api.ResourceSingularEtcd,
+			Image:          c.docker.GetImageWithTag(etcd),
+			LivenessProbe:  livenessProbe,
+			ReadinessProbe: readinessProbe,
 			Ports: []core.ContainerPort{
 				{
-					Name:          "db",
-					ContainerPort: 27017,
+					Name:          "server",
+					ContainerPort: int32(2380),
 					Protocol:      core.ProtocolTCP,
 				},
-			},
-			Args: []string{
-				"--auth",
+				{
+					Name:          "client",
+					ContainerPort: int32(2379),
+					Protocol:      core.ProtocolTCP,
+				},
 			},
 			Resources: etcd.Spec.Resources,
 		})
@@ -161,6 +186,10 @@ func (c *Controller) createStatefulSet(etcd *api.Etcd) (*apps.StatefulSet, kutil
 		in.Spec.Template.Spec.ImagePullSecrets = etcd.Spec.ImagePullSecrets
 		if etcd.Spec.SchedulerName != "" {
 			in.Spec.Template.Spec.SchedulerName = etcd.Spec.SchedulerName
+		}
+
+		if c.EnableRBAC {
+			in.Spec.Template.Spec.ServiceAccountName = etcd.OffshootName()
 		}
 
 		in.Spec.UpdateStrategy.Type = apps.RollingUpdateStatefulSetStrategyType
@@ -223,7 +252,7 @@ func upsertDataVolume(statefulSet *apps.StatefulSet, etcd *api.Etcd) *apps.State
 func upsertEnv(statefulSet *apps.StatefulSet, etcd *api.Etcd) *apps.StatefulSet {
 	envList := []core.EnvVar{
 		{
-			Name: "MONGO_INITDB_ROOT_USERNAME",
+			Name: "ETCD_INITDB_ROOT_USERNAME",
 			ValueFrom: &core.EnvVarSource{
 				SecretKeyRef: &core.SecretKeySelector{
 					LocalObjectReference: core.LocalObjectReference{
@@ -234,7 +263,7 @@ func upsertEnv(statefulSet *apps.StatefulSet, etcd *api.Etcd) *apps.StatefulSet 
 			},
 		},
 		{
-			Name: "MONGO_INITDB_ROOT_PASSWORD",
+			Name: "ETCD_INITDB_ROOT_PASSWORD",
 			ValueFrom: &core.EnvVarSource{
 				SecretKeyRef: &core.SecretKeySelector{
 					LocalObjectReference: core.LocalObjectReference{
@@ -280,6 +309,12 @@ func upsertInitScript(statefulSet *apps.StatefulSet, script core.VolumeSource) *
 	return statefulSet
 }
 
+func upsertObjectMeta(statefulSet *apps.StatefulSet, postgres *api.Postgres) *apps.StatefulSet {
+	statefulSet.Labels = core_util.UpsertMap(statefulSet.Labels, postgres.StatefulSetLabels())
+	statefulSet.Annotations = core_util.UpsertMap(statefulSet.Annotations, postgres.StatefulSetAnnotations())
+	return statefulSet
+}
+
 func (c *Controller) checkStatefulSetPodStatus(statefulSet *apps.StatefulSet) error {
 	err := core_util.WaitUntilPodRunningBySelector(
 		c.Client,
@@ -291,4 +326,28 @@ func (c *Controller) checkStatefulSetPodStatus(statefulSet *apps.StatefulSet) er
 		return err
 	}
 	return nil
+}
+
+func (c *Controller) ensureCombinedNode(etcd *api.Etcd) (kutil.VerbType, error) {
+	return c.ensureStatefulSet(etcd)
+}
+
+func newEtcdProbe(isSecure bool) *core.Probe {
+	// etcd pod is alive only if a linearizable get succeeds.
+	cmd := "ETCDCTL_API=3 etcdctl get foo"
+	if isSecure {
+		//tlsFlags := fmt.Sprintf("--cert=%[1]s/%[2]s --key=%[1]s/%[3]s --cacert=%[1]s/%[4]s", operatorEtcdTLSDir, etcdutil.CliCertFile, etcdutil.CliKeyFile, etcdutil.CliCAFile)
+		//cmd = fmt.Sprintf("ETCDCTL_API=3 etcdctl --endpoints=https://localhost:%d %s get foo", EtcdClientPort, tlsFlags)
+	}
+	return &core.Probe{
+		Handler: core.Handler{
+			Exec: &core.ExecAction{
+				Command: []string{"/bin/sh", "-ec", cmd},
+			},
+		},
+		InitialDelaySeconds: 10,
+		TimeoutSeconds:      10,
+		PeriodSeconds:       60,
+		FailureThreshold:    3,
+	}
 }

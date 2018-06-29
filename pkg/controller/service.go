@@ -23,7 +23,7 @@ func (c *Controller) ensureService(etcd *api.Etcd) (kutil.VerbType, error) {
 	}
 
 	// create database Service
-	vt, err := c.createService(etcd)
+	vt, err := c.createClientService(etcd)
 	if err != nil {
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
 			c.recorder.Eventf(
@@ -46,7 +46,31 @@ func (c *Controller) ensureService(etcd *api.Etcd) (kutil.VerbType, error) {
 			)
 		}
 	}
-	return vt, nil
+
+	vp, err := c.createPeerService(etcd)
+	if err != nil {
+		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
+			c.recorder.Eventf(
+				ref,
+				core.EventTypeWarning,
+				eventer.EventReasonFailedToCreate,
+				"Failed to create Service. Reason: %v",
+				err,
+			)
+		}
+		return kutil.VerbUnchanged, err
+	} else if vp != kutil.VerbUnchanged {
+		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
+			c.recorder.Eventf(
+				ref,
+				core.EventTypeNormal,
+				eventer.EventReasonSuccessful,
+				"Successfully %s Service",
+				vp,
+			)
+		}
+	}
+	return vp, nil
 }
 
 func (c *Controller) checkService(etcd *api.Etcd) error {
@@ -66,7 +90,7 @@ func (c *Controller) checkService(etcd *api.Etcd) error {
 	return nil
 }
 
-func (c *Controller) createService(etcd *api.Etcd) (kutil.VerbType, error) {
+func (c *Controller) createClientService(etcd *api.Etcd) (kutil.VerbType, error) {
 	meta := metav1.ObjectMeta{
 		Name:      etcd.OffshootName(),
 		Namespace: etcd.Namespace,
@@ -80,20 +104,68 @@ func (c *Controller) createService(etcd *api.Etcd) (kutil.VerbType, error) {
 	_, ok, err := core_util.CreateOrPatchService(c.Client, meta, func(in *core.Service) *core.Service {
 		in.ObjectMeta = core_util.EnsureOwnerReference(in.ObjectMeta, ref)
 		in.Labels = etcd.OffshootLabels()
-		in.Spec.Ports = upsertServicePort(in, etcd)
+		in.Spec.Ports = upsertClientServicePort(in, etcd)
 		in.Spec.Selector = etcd.OffshootLabels()
 		return in
 	})
 	return ok, err
 }
 
-func upsertServicePort(service *core.Service, etcd *api.Etcd) []core.ServicePort {
+func (c *Controller) createPeerService(etcd *api.Etcd) (kutil.VerbType, error) {
+	meta := metav1.ObjectMeta{
+		Name:      etcd.OffshootName(),
+		Namespace: etcd.Namespace,
+	}
+
+	ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd)
+	if rerr != nil {
+		return kutil.VerbUnchanged, rerr
+	}
+
+	_, ok, err := core_util.CreateOrPatchService(c.Client, meta, func(in *core.Service) *core.Service {
+		in.ObjectMeta = core_util.EnsureOwnerReference(in.ObjectMeta, ref)
+		in.Labels = etcd.OffshootLabels()
+		in.Spec.Ports = upsertPeerServicePort(in, etcd)
+		in.Spec.Selector = etcd.OffshootLabels()
+		in.Spec.ClusterIP = core.ClusterIPNone
+		return in
+	})
+	return ok, err
+}
+
+func upsertClientServicePort(service *core.Service, etcd *api.Etcd) []core.ServicePort {
 	desiredPorts := []core.ServicePort{
 		{
-			Name:       "db",
+			Name:       "client",
 			Protocol:   core.ProtocolTCP,
-			Port:       27017,
-			TargetPort: intstr.FromString("db"),
+			Port:       2379,
+			TargetPort: intstr.FromInt(2379),
+		},
+	}
+	if etcd.GetMonitoringVendor() == mon_api.VendorPrometheus {
+		desiredPorts = append(desiredPorts, core.ServicePort{
+			Name:       api.PrometheusExporterPortName,
+			Protocol:   core.ProtocolTCP,
+			Port:       etcd.Spec.Monitor.Prometheus.Port,
+			TargetPort: intstr.FromString(api.PrometheusExporterPortName),
+		})
+	}
+	return core_util.MergeServicePorts(service.Spec.Ports, desiredPorts)
+}
+
+func upsertPeerServicePort(service *core.Service, etcd *api.Etcd) []core.ServicePort {
+	desiredPorts := []core.ServicePort{
+		{
+			Name:       "client",
+			Protocol:   core.ProtocolTCP,
+			Port:       2379,
+			TargetPort: intstr.FromInt(2379),
+		},
+		{
+			Name:       "peer",
+			Port:       2380,
+			TargetPort: intstr.FromInt(2380),
+			Protocol:   core.ProtocolTCP,
 		},
 	}
 	if etcd.GetMonitoringVendor() == mon_api.VendorPrometheus {
