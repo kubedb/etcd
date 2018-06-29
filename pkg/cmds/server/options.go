@@ -91,6 +91,7 @@ func (s *ExtraOptions) ApplyTo(cfg *controller.OperatorConfig) error {
 	var err error
 
 	cfg.Docker = s.Docker
+	cfg.EnableRBAC = s.EnableRBAC
 	cfg.OperatorNamespace = s.OperatorNamespace
 	cfg.GoverningService = s.GoverningService
 

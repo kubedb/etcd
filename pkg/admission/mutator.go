@@ -34,11 +34,11 @@ var _ hookapi.AdmissionHook = &EtcdMutator{}
 
 func (a *EtcdMutator) Resource() (plural schema.GroupVersionResource, singular string) {
 	return schema.GroupVersionResource{
-			Group:    "admission.kubedb.com",
+			Group:    "mutators.kubedb.com",
 			Version:  "v1alpha1",
-			Resource: "etcdmutationreviews",
+			Resource: "etcds",
 		},
-		"etcdmutationreview"
+		"etcd"
 }
 
 func (a *EtcdMutator) Initialize(config *rest.Config, stopCh <-chan struct{}) error {
@@ -78,11 +78,11 @@ func (a *EtcdMutator) Admit(req *admission.AdmissionRequest) *admission.Admissio
 	if err != nil {
 		return hookapi.StatusBadRequest(err)
 	}
-	mongoMod, err := setDefaultValues(a.client, a.extClient, obj.(*api.Etcd).DeepCopy())
+	etcdMod, err := setDefaultValues(a.client, a.extClient, obj.(*api.Etcd).DeepCopy())
 	if err != nil {
 		return hookapi.StatusForbidden(err)
-	} else if mongoMod != nil {
-		patch, err := meta_util.CreateJSONPatch(obj, mongoMod)
+	} else if etcdMod != nil {
+		patch, err := meta_util.CreateJSONPatch(obj, etcdMod)
 		if err != nil {
 			return hookapi.StatusInternalServerError(err)
 		}

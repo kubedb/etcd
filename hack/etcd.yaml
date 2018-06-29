@@ -1,45 +1,15 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: kubedb.com/v1alpha1
+kind: Etcd
 metadata:
-  labels:
-    app: etcd
-  name: etcd
+  name: etcd2
   namespace: demo
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: etcd
-  template:
-    metadata:
-      labels:
-        app: etcd
-    spec:
-      containers:
-      - args:
-        - admin
-        - admin
-        image: sanjid/etcd:3.2.13
-        imagePullPolicy: Always
-        name: etcd
-        ports:
-        - containerPort: 2379
-          name: http
-          protocol: TCP
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: etcd
-  name: etcd
-  namespace: demo
-spec:
-  ports:
-  - name: http
-    port: 2380
-    protocol: TCP
-    targetPort: http
-  selector:
-    app: etcd
-  type: LoadBalancer
+  replica: 1
+  version: "3.2.12"
+  storage:
+    storageClassName: "standard"
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi

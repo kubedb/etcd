@@ -4,10 +4,7 @@ import:
   version: master
 - package: github.com/appscode/pat
 - package: github.com/coreos/prometheus-operator
-  repo: https://github.com/tamalsaha/prometheus-operator.git
-  version: k-1.9
-- package: github.com/cpuguy83/go-md2man
-  version: v1.0.4
+  version: v0.20.0
 - package: github.com/graymeta/stow
   repo: https://github.com/appscode/stow.git
   vcs: git
@@ -15,20 +12,16 @@ import:
 - package: github.com/jpillora/go-ogle-analytics
 - package: github.com/kubedb/apimachinery
   version: master
-- package: github.com/prometheus/client_golang
-  version: v0.8.0
-- package: github.com/prometheus/common
-  version: 3233b24a36715a2fe36d162260457857a56d672d
-- package: github.com/sirupsen/logrus
-  version: v1.0.3
 - package: github.com/spf13/cobra
-  version: master
+  version: v0.0.3
 - package: github.com/spf13/pflag
-  version: master
+  version: v1.0.1
 - package: k8s.io/api
   version: kubernetes-1.10.0
 - package: k8s.io/apimachinery
-  version: kubernetes-1.10.0
+  repo: https://github.com/pharmer/apimachinery.git
+  vcs: git
+  version: release-1.10
 - package: k8s.io/apiserver
   repo: https://github.com/tamalsaha/apiserver.git
   version: k-1.10
@@ -44,8 +37,6 @@ import:
   version: release-7.0
 - package: github.com/appscode/kube-mon
   version: release-7.0
-- package: k8s.io/kube-openapi
-  version: master
 - package: github.com/openshift/api
   version: 09a4e3d50f1aae6613b1b86941ffb8bded21e674
 - package: github.com/openshift/client-go
