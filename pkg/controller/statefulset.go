@@ -119,10 +119,11 @@ func (c *Controller) createStatefulSet(
 		readinessProbe.FailureThreshold = 3
 
 		in.Spec.Template.Spec.Containers = core_util.UpsertContainer(in.Spec.Template.Spec.Containers, core.Container{
-			Name:           api.ResourceSingularEtcd,
-			Image:          c.docker.GetImageWithTag(etcd),
-			LivenessProbe:  livenessProbe,
-			ReadinessProbe: readinessProbe,
+			Name:            api.ResourceSingularEtcd,
+			Image:           c.docker.GetImageWithTag(etcd),
+			ImagePullPolicy: core.PullAlways,
+			LivenessProbe:   livenessProbe,
+			ReadinessProbe:  readinessProbe,
 			Ports: []core.ContainerPort{
 				{
 					Name:          "server",

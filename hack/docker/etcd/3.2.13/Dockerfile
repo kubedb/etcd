@@ -1,4 +1,4 @@
-FROM postgres:10.2-alpine
+FROM quay.io/coreos/etcd:v3.2.13
 
 RUN set -x \
   && apk add --update --no-cache ca-certificates

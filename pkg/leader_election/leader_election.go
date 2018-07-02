@@ -6,6 +6,7 @@ import (
 	"os"
 	//"os/user"
 	//"strconv"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -78,7 +79,7 @@ func RunLeaderElection() {
 		},
 	}
 
-	//runningFirstTime := true
+	runningFirstTime := true
 
 	go func() {
 		leaderelection.RunOrDie(leaderelection.LeaderElectionConfig{
@@ -97,7 +98,7 @@ func RunLeaderElection() {
 				OnNewLeader: func(identity string) {
 					fmt.Println("New leader.................")
 					statefulSet, err := kubeClient.AppsV1().StatefulSets(namespace).Get(statefulSetName, metav1.GetOptions{})
-					fmt.Println("identity.......................", err)
+					fmt.Println("identity.......................", identity, err)
 					if err != nil {
 						log.Fatalln(err)
 					}
@@ -105,34 +106,73 @@ func RunLeaderElection() {
 					pods, err := kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{
 						LabelSelector: metav1.FormatLabelSelector(statefulSet.Spec.Selector),
 					})
+
+					fmt.Println(err, ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,")
 					if err != nil {
 						log.Fatalln(err)
 					}
 
 					initialCluster := initialClusterUrls(pods.Items, statefulSetName)
+					fmt.Println(initialCluster, "<><><><")
 					dataDir := "/var/lib/etcd"
-					commands := fmt.Sprintf("/usr/local/bin/etcd --data-dir=%s "+
+					commands := fmt.Sprintf("--data-dir=%s "+
 						"--initial-cluster=%s",
 						dataDir, strings.Join(initialCluster, ","))
+					fmt.Println(commands, "?????????????????????")
 
 					for _, pod := range pods.Items {
 						role := RoleExisting
 						if pod.Name == identity {
 							role = RoleNew
 						}
-						commands += fmt.Sprintf(" --name=%s --initial-advertise-peer-urls=%s "+
-							"--listen-peer-urls=%s --listen-client-urls=%s --advertise-client-urls=%s --initial-cluster-state=%s",
-							pod.Name,
-							fmt.Sprintf("http://%s:2380", podAddress(pod, statefulSetName)),
-							fmt.Sprintf("http://0.0.0.0:2380"),
-							fmt.Sprintf("http://0.0.0.0:2379"),
-							fmt.Sprintf("http://%s:2379", podAddress(pod, statefulSetName)),
-							role)
+
 						_, _, err = core_util.PatchPod(kubeClient, &pod, func(in *core.Pod) *core.Pod {
 							in.Labels["kubedb.com/role"] = role
-							in.Spec.Containers[0].Command = strings.Split(commands, " ")
+							//in.Labels["kubedb.com/etcd"]  = commands //strings.Split(commands, " ")
 							return in
 						})
+						fmt.Println(err, "^^^^^^^^^^^^^^^^^^^^^")
+					}
+
+					if runningFirstTime {
+						runningFirstTime = false
+						fmt.Println(",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,")
+						go func() {
+							pods, err := kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+							fmt.Println(pods.Items)
+							if err != nil {
+								log.Println(err)
+							}
+							for _, pod := range pods.Items {
+								if identity == pod.Name {
+									role := pod.Labels["kubedb.com/role"]
+									fmt.Println(role, "..............")
+									if role == "" {
+										role = RoleNew
+									}
+									commands += fmt.Sprintf(" --name=%s --initial-advertise-peer-urls=%s "+
+										"--listen-peer-urls=%s --listen-client-urls=%s --advertise-client-urls=%s --initial-cluster-state=%s",
+										pod.Name,
+										fmt.Sprintf("http://%s:2380", podAddress(pod, statefulSetName)),
+										fmt.Sprintf("http://0.0.0.0:2380"),
+										fmt.Sprintf("http://0.0.0.0:2379"),
+										fmt.Sprintf("http://%s:2379", podAddress(pod, statefulSetName)),
+										role)
+									fmt.Println(commands, "###########################")
+
+									cmd := exec.Command("/usr/local/bin/etcd", commands)
+									fmt.Println(cmd, "<><", cmd.Args, "&&&&&&&&&&&&&&&&")
+									cmd.Stdout = os.Stdout
+									cmd.Stderr = os.Stderr
+
+									if err = cmd.Run(); err != nil {
+										log.Println(err)
+									}
+									os.Exit(1)
+								}
+							}
+
+						}()
 					}
 				},
 			},
