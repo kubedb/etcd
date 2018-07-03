@@ -4,7 +4,7 @@ metadata:
   name: quick-etcd
   namespace: demo
 spec:
-  replica: 1
+  replicas: 2
   version: "3.2.13"
   storage:
     storageClassName: "standard"

@@ -128,11 +128,18 @@ func RunLeaderElection() {
 
 						_, _, err = core_util.PatchPod(kubeClient, &pod, func(in *core.Pod) *core.Pod {
 							in.Labels["kubedb.com/role"] = role
+							in.Spec.Containers[0].Args = append(in.Spec.Containers[0].Args)
 							//in.Labels["kubedb.com/etcd"]  = commands //strings.Split(commands, " ")
 							return in
 						})
 						fmt.Println(err, "^^^^^^^^^^^^^^^^^^^^^")
 					}
+					role := RoleExisting
+					if identity == hostname {
+						role = RoleNew
+					}
+					fmt.Println(identity, "@@@@@@@", hostname)
+
 
 					if runningFirstTime {
 						runningFirstTime = false
@@ -144,12 +151,8 @@ func RunLeaderElection() {
 								log.Println(err)
 							}
 							for _, pod := range pods.Items {
-								if identity == pod.Name {
-									role := pod.Labels["kubedb.com/role"]
-									fmt.Println(role, "..............")
-									if role == "" {
-										role = RoleNew
-									}
+								if hostname == pod.Name {
+
 									commands += fmt.Sprintf(" --name=%s --initial-advertise-peer-urls=%s "+
 										"--listen-peer-urls=%s --listen-client-urls=%s --advertise-client-urls=%s --initial-cluster-state=%s",
 										pod.Name,
@@ -160,7 +163,7 @@ func RunLeaderElection() {
 										role)
 									fmt.Println(commands, "###########################")
 
-									cmd := exec.Command("/usr/local/bin/etcd", commands)
+									cmd := exec.Command("/usr/local/bin/etcd", strings.Split(commands, " ")...)
 									fmt.Println(cmd, "<><", cmd.Args, "&&&&&&&&&&&&&&&&")
 									cmd.Stdout = os.Stdout
 									cmd.Stderr = os.Stderr
@@ -215,5 +218,5 @@ func initialClusterUrls(items []core.Pod, offshootName string) []string {
 }
 
 func podAddress(pod core.Pod, cluster string) string {
-	return fmt.Sprintf("%s.%s.%s.svc", pod.Name, cluster, pod.Namespace)
+	return fmt.Sprintf("%s.%s.%s.svc.cluster.local", pod.Name, "kubed", pod.Namespace)
 }

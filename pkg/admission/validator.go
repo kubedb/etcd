@@ -132,7 +132,7 @@ func ValidateEtcd(client kubernetes.Interface, extClient kubedbv1alpha1.KubedbV1
 		return fmt.Errorf(`KubeDB doesn't support Etcd version: %s`, string(etcd.Spec.Version))
 	}
 
-	if etcd.Spec.Replicas == nil || *etcd.Spec.Replicas != 1 {
+	if etcd.Spec.Replicas == nil  {
 		return fmt.Errorf(`spec.replicas "%v" invalid. Value must be one`, etcd.Spec.Replicas)
 	}
 

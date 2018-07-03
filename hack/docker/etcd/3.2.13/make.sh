@@ -1,45 +1,11 @@
 #!/bin/bash
 set -xeou pipefail
 
-GOPATH=$(go env GOPATH)
-REPO_ROOT=$GOPATH/src/github.com/kubedb/etcd
-
-source "$REPO_ROOT/hack/libbuild/common/lib.sh"
-source "$REPO_ROOT/hack/libbuild/common/kubedb_image.sh"
-
+DOCKER_REGISTRY=${DOCKER_REGISTRY:-kubedb}
 IMG=etcd
 TAG=3.2.13
+ORGINAL=quay.io/coreos/etcd:v3.2.13
+docker pull $ORGINAL
 
-WALG_VER=${WALG_VER:-v0.1.7}
-
-DIST="$REPO_ROOT/dist"
-mkdir -p "$DIST"
-
-build_binary() {
-    pushd $REPO_ROOT
-    ./hack/builddeps.sh
-    ./hack/make.py build etcd-operator
-    popd
-}
-
-build_docker() {
-    pushd "$REPO_ROOT/hack/docker/etcd/$TAG"
-
-
-    # Copy pg-operator
-    cp "$DIST/etcd-operator/etcd-operator-alpine-amd64" etcd-operator
-    chmod 755 etcd-operator
-
-    local cmd="docker build -t $DOCKER_REGISTRY/$IMG:$TAG ."
-    echo $cmd; $cmd
-
-    rm etcd-operator
-    popd
-}
-
-build() {
-    build_binary
-    build_docker
-}
-
-binary_repo $@
+docker tag $ORGINAL "$DOCKER_REGISTRY/$IMG:$TAG"
+docker push "$DOCKER_REGISTRY/$IMG:$TAG"

@@ -180,9 +180,7 @@ func (c *Controller) ensureEtcdNode(etcd *api.Etcd) (kutil.VerbType, error) {
 	if err := c.ensureDatabaseSecret(etcd); err != nil {
 		return kutil.VerbUnchanged, err
 	}
-	fmt.Println(c.EnableRBAC, "..............................>>>>>>>>>>>>>>>>>>>>>>>")
 	if c.EnableRBAC {
-		fmt.Println("------------------------------------")
 		// Ensure ClusterRoles for database statefulsets
 		if err := c.ensureRBACStuff(etcd); err != nil {
 			return kutil.VerbUnchanged, err

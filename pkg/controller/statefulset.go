@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
+	"strings"
 )
 
 func (c *Controller) ensureStatefulSet(etcd *api.Etcd) (kutil.VerbType, error) {
@@ -25,7 +26,7 @@ func (c *Controller) ensureStatefulSet(etcd *api.Etcd) (kutil.VerbType, error) {
 	}
 
 	// Create statefulSet for Etcd database
-	statefulSet, vt, err := c.createStatefulSet(etcd, 1)
+	statefulSet, vt, err := c.createStatefulSet(etcd)
 	if err != nil {
 		return kutil.VerbUnchanged, err
 	}
@@ -75,8 +76,7 @@ func (c *Controller) checkStatefulSet(etcd *api.Etcd) error {
 }
 
 func (c *Controller) createStatefulSet(
-	etcd *api.Etcd,
-	replicas int32) (*apps.StatefulSet, kutil.VerbType, error) {
+	etcd *api.Etcd) (*apps.StatefulSet, kutil.VerbType, error) {
 	statefulSetMeta := metav1.ObjectMeta{
 		Name:      etcd.OffshootName(),
 		Namespace: etcd.Namespace,
@@ -86,12 +86,35 @@ func (c *Controller) createStatefulSet(
 	if rerr != nil {
 		return nil, kutil.VerbUnchanged, rerr
 	}
+	leader := fmt.Sprintf("%s-0", etcd.OffshootName())
+	var i int32
+	initialCluster := make([]string, 0)
+	fmt.Println(*etcd.Spec.Replicas, "*************************")
+	for i =0; i< *etcd.Spec.Replicas; i++ {
+		initialCluster = append(initialCluster,
+			fmt.Sprintf("%s=%s",
+				fmt.Sprintf("%s-%v", etcd.OffshootName(), i),
+				fmt.Sprintf("http://$(NODE_NAME).%s.%s.svc.cluster.local:2380", c.GoverningService, etcd.Namespace)))
+	}
+	fmt.Println(initialCluster, "------------------------------")
+	commands := []string{
+		"/bin/sh",
+		"-c",
+	}
+	params := []string {
+		fmt.Sprintf("--data-dir=%s", "/data/db"),
+		"--name=$(NODE_NAME)",
+		fmt.Sprintf("--initial-advertise-peer-urls=http://$(NODE_NAME).%s.%s.svc.cluster.local:2380", c.GoverningService, etcd.Namespace),
+		"--listen-peer-urls=http://0.0.0.0:2380",
+		"--listen-client-urls=http://0.0.0.0:2379",
+		fmt.Sprintf("--advertise-client-urls=http://$(NODE_NAME).%s.%s.svc.cluster.local:2379", c.GoverningService, etcd.Namespace),
+		fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")),
+		"--initial-cluster-state=$CLUSTER_STATE",
+	}
+	args := fmt.Sprintf("if [ $(NODE_NAME) == %s ]; then CLUSTER_STATE=new; else CLUSTER_STATE=existing; fi; /usr/local/bin/etcd %s",  leader, strings.Join(params, " "))
 
-	/*commands := fmt.Sprintf("/usr/local/bin/etcd --data-dir=%s --name=%s --initial-advertise-peer-urls=%s "+
-		"--listen-peer-urls=%s --listen-client-urls=%s --advertise-client-urls=%s "+
-		"--initial-cluster=%s --initial-cluster-state=%s",
-		"/var/lib/etcd", etcd.Name, etcd.PeerURL(), m.ListenPeerURL(), m.ListenClientURL(), m.ClientURL(), strings.Join(initialCluster, ","), state)
-	if m.SecurePeer {
+	fmt.Println(args, "<><><><<<<<>>>>>>>>")
+	/*if m.SecurePeer {
 		commands += fmt.Sprintf(" --peer-client-cert-auth=true --peer-trusted-ca-file=%[1]s/peer-ca.crt --peer-cert-file=%[1]s/peer.crt --peer-key-file=%[1]s/peer.key", peerTLSDir)
 	}
 	if m.SecureClient {
@@ -104,7 +127,7 @@ func (c *Controller) createStatefulSet(
 		in.Labels = core_util.UpsertMap(in.Labels, etcd.StatefulSetLabels())
 		in.Annotations = core_util.UpsertMap(in.Annotations, etcd.StatefulSetAnnotations())
 
-		in.Spec.Replicas = types.Int32P(replicas)
+		in.Spec.Replicas = etcd.Spec.Replicas
 		in.Spec.ServiceName = c.GoverningService
 		in.Spec.Template.Labels = in.Labels
 		in.Spec.Selector = &metav1.LabelSelector{
@@ -121,12 +144,13 @@ func (c *Controller) createStatefulSet(
 		in.Spec.Template.Spec.Containers = core_util.UpsertContainer(in.Spec.Template.Spec.Containers, core.Container{
 			Name:            api.ResourceSingularEtcd,
 			Image:           c.docker.GetImageWithTag(etcd),
-			ImagePullPolicy: core.PullAlways,
+			Command: commands,
+			Args: []string{args},
 			LivenessProbe:   livenessProbe,
 			ReadinessProbe:  readinessProbe,
 			Ports: []core.ContainerPort{
 				{
-					Name:          "server",
+					Name:          "peer",
 					ContainerPort: int32(2380),
 					Protocol:      core.ProtocolTCP,
 				},
@@ -264,6 +288,15 @@ func upsertEnv(statefulSet *apps.StatefulSet, etcd *api.Etcd) *apps.StatefulSet 
 			Name:  "PRIMARY_HOST",
 			Value: etcd.ServiceName(),
 		},
+		{
+			Name: "NODE_NAME",
+			ValueFrom: &core.EnvVarSource{
+				FieldRef: &core.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
+		},
+
 		/*{
 			Name: "ETCD_INITDB_ROOT_USERNAME",
 			ValueFrom: &core.EnvVarSource{
