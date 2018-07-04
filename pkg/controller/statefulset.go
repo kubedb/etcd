@@ -90,11 +90,12 @@ func (c *Controller) createStatefulSet(
 	var i int32
 	initialCluster := make([]string, 0)
 	fmt.Println(*etcd.Spec.Replicas, "*************************")
-	for i =0; i< *etcd.Spec.Replicas; i++ {
+	for i = *etcd.Spec.Replicas -1; i>=0; i-- {
+		podName := fmt.Sprintf("%s-%v", etcd.OffshootName(), i)
 		initialCluster = append(initialCluster,
 			fmt.Sprintf("%s=%s",
-				fmt.Sprintf("%s-%v", etcd.OffshootName(), i),
-				fmt.Sprintf("http://$(NODE_NAME).%s.%s.svc.cluster.local:2380", c.GoverningService, etcd.Namespace)))
+				podName,
+				fmt.Sprintf("http://%s.%s.%s.svc.cluster.local:2380",podName, c.GoverningService, etcd.Namespace)))
 	}
 	fmt.Println(initialCluster, "------------------------------")
 	commands := []string{
@@ -110,8 +111,9 @@ func (c *Controller) createStatefulSet(
 		fmt.Sprintf("--advertise-client-urls=http://$(NODE_NAME).%s.%s.svc.cluster.local:2379", c.GoverningService, etcd.Namespace),
 		fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")),
 		"--initial-cluster-state=$CLUSTER_STATE",
+		//fmt.Sprintf("--initial-cluster-token=%s", etcd.OffshootName()),
 	}
-	args := fmt.Sprintf("if [ $(NODE_NAME) == %s ]; then CLUSTER_STATE=new; else CLUSTER_STATE=existing; fi; /usr/local/bin/etcd %s",  leader, strings.Join(params, " "))
+	args := fmt.Sprintf("if [ $(NODE_NAME) == %s ]; then CLUSTER_STATE=new; else CLUSTER_STATE=existing; fi; echo $CLUSTER_STATE; /usr/local/bin/etcd %s",  leader, strings.Join(params, " "))
 
 	fmt.Println(args, "<><><><<<<<>>>>>>>>")
 	/*if m.SecurePeer {
@@ -150,7 +152,7 @@ func (c *Controller) createStatefulSet(
 			ReadinessProbe:  readinessProbe,
 			Ports: []core.ContainerPort{
 				{
-					Name:          "peer",
+					Name:          "server",
 					ContainerPort: int32(2380),
 					Protocol:      core.ProtocolTCP,
 				},
@@ -218,6 +220,18 @@ func (c *Controller) createStatefulSet(
 		}
 
 		in.Spec.UpdateStrategy.Type = apps.RollingUpdateStatefulSetStrategyType
+
+		/*in.Spec.Template.Spec.InitContainers = []core.Container{
+			{
+				Image: "busybox:1.28.0-glibc",
+				Name: "check-dns",
+				Command: []string{"/bin/sh", "-c", fmt.Sprintf(`
+					while ( ! nslookup %s )
+					do
+						sleep 1
+					done`, fmt.Sprintf("$(NODE_NAME).%s.%s.svc.cluster.local", c.GoverningService, etcd.Namespace))},
+			},
+		}*/
 		return in
 	})
 }

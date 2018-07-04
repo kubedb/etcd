@@ -47,30 +47,7 @@ func (c *Controller) ensureService(etcd *api.Etcd) (kutil.VerbType, error) {
 		}
 	}
 
-	vp, err := c.createPeerService(etcd)
-	if err != nil {
-		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
-			c.recorder.Eventf(
-				ref,
-				core.EventTypeWarning,
-				eventer.EventReasonFailedToCreate,
-				"Failed to create Service. Reason: %v",
-				err,
-			)
-		}
-		return kutil.VerbUnchanged, err
-	} else if vp != kutil.VerbUnchanged {
-		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
-			c.recorder.Eventf(
-				ref,
-				core.EventTypeNormal,
-				eventer.EventReasonSuccessful,
-				"Successfully %s Service",
-				vp,
-			)
-		}
-	}
-	return vp, nil
+	return vt, nil
 }
 
 func (c *Controller) checkService(etcd *api.Etcd) error {
@@ -177,4 +154,45 @@ func upsertPeerServicePort(service *core.Service, etcd *api.Etcd) []core.Service
 		})
 	}
 	return core_util.MergeServicePorts(service.Spec.Ports, desiredPorts)
+}
+
+func (c *Controller) createEtcdGoverningService(etcd *api.Etcd) (string, error) {
+	ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd)
+	if rerr != nil {
+		return "", rerr
+	}
+
+	service := &core.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: etcd.ServiceName()+"-gvr",
+			Labels: etcd.OffshootLabels(),
+			Namespace: etcd.Namespace,
+		},
+		Spec: core.ServiceSpec{
+			Type:      core.ServiceTypeClusterIP,
+			ClusterIP: core.ClusterIPNone,
+			Ports: []core.ServicePort{
+				{
+					Name:       "client",
+					Protocol:   core.ProtocolTCP,
+					Port:       2379,
+					TargetPort: intstr.FromInt(2379),
+				},
+				{
+					Name:       "peer",
+					Port:       2380,
+					TargetPort: intstr.FromInt(2380),
+					Protocol:   core.ProtocolTCP,
+				},
+			},
+			Selector: etcd.OffshootLabels(),
+		},
+	}
+	service.ObjectMeta = core_util.EnsureOwnerReference(service.ObjectMeta, ref)
+
+	_, err := c.Client.CoreV1().Services(etcd.Namespace).Create(service)
+	if err != nil && !kerr.IsAlreadyExists(err) {
+		return "", err
+	}
+	return service.Name, nil
 }

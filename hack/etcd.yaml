@@ -1,10 +1,10 @@
 apiVersion: kubedb.com/v1alpha1
 kind: Etcd
 metadata:
-  name: quick-etcd
+  name: etcd-cluster
   namespace: demo
 spec:
-  replicas: 2
+  replicas: 1
   version: "3.2.13"
   storage:
     storageClassName: "standard"

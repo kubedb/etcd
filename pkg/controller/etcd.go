@@ -68,8 +68,8 @@ func (c *Controller) create(etcd *api.Etcd) error {
 	}
 
 	// create Governing Service
-	governingService := c.GoverningService
-	if err := c.CreateGoverningService(governingService, etcd.Namespace); err != nil {
+	governingService , err := c.createEtcdGoverningService(etcd)
+	if err != nil {
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
 			c.recorder.Eventf(
 				ref,
@@ -82,6 +82,9 @@ func (c *Controller) create(etcd *api.Etcd) error {
 		}
 		return err
 	}
+	fmt.Println(governingService, "-----------")
+	c.GoverningService = governingService
+	fmt.Println(c.GoverningService, ">>>>>>>>>>>>>>>>>>>")
 
 	// ensure database Service
 	vt1, err := c.ensureService(etcd)
