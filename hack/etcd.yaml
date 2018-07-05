@@ -1,7 +1,7 @@
 apiVersion: kubedb.com/v1alpha1
 kind: Etcd
 metadata:
-  name: etcd-cluster
+  name: etcd-new
   namespace: demo
 spec:
   replicas: 1

@@ -4,7 +4,6 @@ import (
 	core_util "github.com/appscode/kutil/core/v1"
 	rbac_util "github.com/appscode/kutil/rbac/v1beta1"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	le "github.com/kubedb/etcd/pkg/leader_election"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1beta1"
@@ -49,18 +48,7 @@ func (c *Controller) ensureRole(etcd *api.Etcd) error {
 				{
 					APIGroups: []string{core.GroupName},
 					Resources: []string{"pods"},
-					Verbs:     []string{"list", "patch"},
-				},
-				{
-					APIGroups: []string{core.GroupName},
-					Resources: []string{"configmaps"},
-					Verbs:     []string{"create"},
-				},
-				{
-					APIGroups:     []string{core.GroupName},
-					Resources:     []string{"configmaps"},
-					Verbs:         []string{"get", "update"},
-					ResourceNames: []string{le.GetLeaderLockName(etcd.OffshootName())},
+					Verbs:     []string{"get"},
 				},
 			}
 			return in

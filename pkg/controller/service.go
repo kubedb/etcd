@@ -164,8 +164,8 @@ func (c *Controller) createEtcdGoverningService(etcd *api.Etcd) (string, error) 
 
 	service := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: etcd.ServiceName()+"-gvr",
-			Labels: etcd.OffshootLabels(),
+			Name:      etcd.ServiceName() + "-gvr",
+			Labels:    etcd.OffshootLabels(),
 			Namespace: etcd.Namespace,
 		},
 		Spec: core.ServiceSpec{

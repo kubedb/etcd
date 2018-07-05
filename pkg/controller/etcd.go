@@ -68,7 +68,7 @@ func (c *Controller) create(etcd *api.Etcd) error {
 	}
 
 	// create Governing Service
-	governingService , err := c.createEtcdGoverningService(etcd)
+	governingService, err := c.createEtcdGoverningService(etcd)
 	if err != nil {
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
 			c.recorder.Eventf(

@@ -5,12 +5,12 @@ metadata:
   labels:
     app: kubedb
 webhooks:
-- name: etcd.admission.kubedb.com
+- name: etcd.mutators.kubedb.com
   clientConfig:
     service:
       namespace: default
       name: kubernetes
-      path: /apis/admission.kubedb.com/v1alpha1/etcdmutationreviews
+      path: /apis/mutators.kubedb.com/v1alpha1/etcds
     caBundle: ${KUBE_CA}
   rules:
   - apiGroups: ["kubedb.com"]
@@ -18,3 +18,4 @@ webhooks:
     resources: ["etcds"]
     operations: ["CREATE", "UPDATE", "DELETE"]
   failurePolicy: Fail
+

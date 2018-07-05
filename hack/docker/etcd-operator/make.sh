@@ -79,7 +79,7 @@ docker_push() {
 docker_release() {
     if [ "$APPSCODE_ENV" != "prod" ]; then
         echo "'release' only works in PROD env."
-        exit 1
+        exitrbac 1
     fi
     if [ "$TAG_STRATEGY" != "git_tag" ]; then
         echo "'apply_tag' to release binaries and/or docker images."

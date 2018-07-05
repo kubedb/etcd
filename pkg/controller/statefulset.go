@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/appscode/go/log"
 	"github.com/appscode/go/types"
@@ -17,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
-	"strings"
 )
 
 func (c *Controller) ensureStatefulSet(etcd *api.Etcd) (kutil.VerbType, error) {
@@ -90,19 +90,19 @@ func (c *Controller) createStatefulSet(
 	var i int32
 	initialCluster := make([]string, 0)
 	fmt.Println(*etcd.Spec.Replicas, "*************************")
-	for i = *etcd.Spec.Replicas -1; i>=0; i-- {
+	for i = *etcd.Spec.Replicas - 1; i >= 0; i-- {
 		podName := fmt.Sprintf("%s-%v", etcd.OffshootName(), i)
 		initialCluster = append(initialCluster,
 			fmt.Sprintf("%s=%s",
 				podName,
-				fmt.Sprintf("http://%s.%s.%s.svc.cluster.local:2380",podName, c.GoverningService, etcd.Namespace)))
+				fmt.Sprintf("http://%s.%s.%s.svc.cluster.local:2380", podName, c.GoverningService, etcd.Namespace)))
 	}
 	fmt.Println(initialCluster, "------------------------------")
 	commands := []string{
 		"/bin/sh",
 		"-c",
 	}
-	params := []string {
+	params := []string{
 		fmt.Sprintf("--data-dir=%s", "/data/db"),
 		"--name=$(NODE_NAME)",
 		fmt.Sprintf("--initial-advertise-peer-urls=http://$(NODE_NAME).%s.%s.svc.cluster.local:2380", c.GoverningService, etcd.Namespace),
@@ -111,9 +111,10 @@ func (c *Controller) createStatefulSet(
 		fmt.Sprintf("--advertise-client-urls=http://$(NODE_NAME).%s.%s.svc.cluster.local:2379", c.GoverningService, etcd.Namespace),
 		fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")),
 		"--initial-cluster-state=$CLUSTER_STATE",
+		"$CLUSTER_TOKEN",
 		//fmt.Sprintf("--initial-cluster-token=%s", etcd.OffshootName()),
 	}
-	args := fmt.Sprintf("if [ $(NODE_NAME) == %s ]; then CLUSTER_STATE=new; else CLUSTER_STATE=existing; fi; echo $CLUSTER_STATE; /usr/local/bin/etcd %s",  leader, strings.Join(params, " "))
+	args := fmt.Sprintf("if [ $(NODE_NAME) == %s ]; then CLUSTER_STATE=new CLUSTER_TOKEN=--initial-cluster-token=%s; else CLUSTER_STATE=existing; fi; echo $CLUSTER_STATE; /usr/local/bin/etcd %s", leader, "f0cf44e4-c3f3-4077-a9b8-d33a385e4823", strings.Join(params, " "))
 
 	fmt.Println(args, "<><><><<<<<>>>>>>>>")
 	/*if m.SecurePeer {
@@ -127,6 +128,10 @@ func (c *Controller) createStatefulSet(
 	return app_util.CreateOrPatchStatefulSet(c.Client, statefulSetMeta, func(in *apps.StatefulSet) *apps.StatefulSet {
 		in.ObjectMeta = core_util.EnsureOwnerReference(in.ObjectMeta, ref)
 		in.Labels = core_util.UpsertMap(in.Labels, etcd.StatefulSetLabels())
+		in.Labels = core_util.UpsertMap(in.Labels, map[string]string{
+			"app":          "etcd",
+			"etcd_cluster": etcd.Name,
+		})
 		in.Annotations = core_util.UpsertMap(in.Annotations, etcd.StatefulSetAnnotations())
 
 		in.Spec.Replicas = etcd.Spec.Replicas
@@ -144,12 +149,11 @@ func (c *Controller) createStatefulSet(
 		readinessProbe.FailureThreshold = 3
 
 		in.Spec.Template.Spec.Containers = core_util.UpsertContainer(in.Spec.Template.Spec.Containers, core.Container{
-			Name:            api.ResourceSingularEtcd,
-			Image:           c.docker.GetImageWithTag(etcd),
-			Command: commands,
-			Args: []string{args},
-			LivenessProbe:   livenessProbe,
-			ReadinessProbe:  readinessProbe,
+			Name:           api.ResourceSingularEtcd,
+			Image:          c.docker.GetImageWithTag(etcd),
+			Command:        commands,
+			LivenessProbe:  livenessProbe,
+			ReadinessProbe: readinessProbe,
 			Ports: []core.ContainerPort{
 				{
 					Name:          "server",
@@ -215,23 +219,29 @@ func (c *Controller) createStatefulSet(
 			in.Spec.Template.Spec.SchedulerName = etcd.Spec.SchedulerName
 		}
 
-		if c.EnableRBAC {
-			in.Spec.Template.Spec.ServiceAccountName = etcd.OffshootName()
-		}
-
 		in.Spec.UpdateStrategy.Type = apps.RollingUpdateStatefulSetStrategyType
 
-		/*in.Spec.Template.Spec.InitContainers = []core.Container{
+		in.Spec.Template.Spec.InitContainers = []core.Container{
 			{
 				Image: "busybox:1.28.0-glibc",
-				Name: "check-dns",
+				Name:  "check-dns",
 				Command: []string{"/bin/sh", "-c", fmt.Sprintf(`
 					while ( ! nslookup %s )
 					do
 						sleep 1
 					done`, fmt.Sprintf("$(NODE_NAME).%s.%s.svc.cluster.local", c.GoverningService, etcd.Namespace))},
+				Env: []core.EnvVar{
+					{
+						Name: "NODE_NAME",
+						ValueFrom: &core.EnvVarSource{
+							FieldRef: &core.ObjectFieldSelector{
+								FieldPath: "metadata.name",
+							},
+						},
+					},
+				},
 			},
-		}*/
+		}
 		return in
 	})
 }
@@ -369,9 +379,9 @@ func upsertInitScript(statefulSet *apps.StatefulSet, script core.VolumeSource) *
 	return statefulSet
 }
 
-func upsertObjectMeta(statefulSet *apps.StatefulSet, postgres *api.Postgres) *apps.StatefulSet {
-	statefulSet.Labels = core_util.UpsertMap(statefulSet.Labels, postgres.StatefulSetLabels())
-	statefulSet.Annotations = core_util.UpsertMap(statefulSet.Annotations, postgres.StatefulSetAnnotations())
+func upsertObjectMeta(statefulSet *apps.StatefulSet, etcd *api.Etcd) *apps.StatefulSet {
+	statefulSet.Labels = core_util.UpsertMap(statefulSet.Labels, etcd.StatefulSetLabels())
+	statefulSet.Annotations = core_util.UpsertMap(statefulSet.Annotations, etcd.StatefulSetAnnotations())
 	return statefulSet
 }
 

@@ -3,8 +3,8 @@ package util
 import "fmt"
 
 type Member struct {
-	Name string
-	service string
+	Name      string
+	service   string
 	Namespace string
 	// ID field can be 0, which is unknown ID.
 	// We know the ID of a member when we get the member information from etcd,
