@@ -48,3 +48,7 @@ func (m *Member) ListenPeerURL() string {
 func (m *Member) PeerURL() string {
 	return fmt.Sprintf("%s://%s:2380", m.peerScheme(), m.Addr())
 }
+
+func GetEndpointsFromCluster(cluster string)  {
+
+}

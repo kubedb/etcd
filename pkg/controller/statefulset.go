@@ -86,11 +86,11 @@ func (c *Controller) createStatefulSet(
 	if rerr != nil {
 		return nil, kutil.VerbUnchanged, rerr
 	}
-	leader := fmt.Sprintf("%s-0", etcd.OffshootName())
+//	leader := fmt.Sprintf("%s-0", etcd.OffshootName())
 	var i int32
 	initialCluster := make([]string, 0)
 	fmt.Println(*etcd.Spec.Replicas, "*************************")
-	for i = *etcd.Spec.Replicas - 1; i >= 0; i-- {
+	for i = 0; i < *etcd.Spec.Replicas ; i++ {
 		podName := fmt.Sprintf("%s-%v", etcd.OffshootName(), i)
 		initialCluster = append(initialCluster,
 			fmt.Sprintf("%s=%s",
@@ -98,11 +98,9 @@ func (c *Controller) createStatefulSet(
 				fmt.Sprintf("http://%s.%s.%s.svc.cluster.local:2380", podName, c.GoverningService, etcd.Namespace)))
 	}
 	fmt.Println(initialCluster, "------------------------------")
-	commands := []string{
-		"/bin/sh",
-		"-c",
-	}
+
 	params := []string{
+		"etcd-helper",
 		fmt.Sprintf("--data-dir=%s", "/data/db"),
 		"--name=$(NODE_NAME)",
 		fmt.Sprintf("--initial-advertise-peer-urls=http://$(NODE_NAME).%s.%s.svc.cluster.local:2380", c.GoverningService, etcd.Namespace),
@@ -110,13 +108,8 @@ func (c *Controller) createStatefulSet(
 		"--listen-client-urls=http://0.0.0.0:2379",
 		fmt.Sprintf("--advertise-client-urls=http://$(NODE_NAME).%s.%s.svc.cluster.local:2379", c.GoverningService, etcd.Namespace),
 		fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")),
-		"--initial-cluster-state=$CLUSTER_STATE",
-		"$CLUSTER_TOKEN",
 		//fmt.Sprintf("--initial-cluster-token=%s", etcd.OffshootName()),
 	}
-	args := fmt.Sprintf("if [ $(NODE_NAME) == %s ]; then CLUSTER_STATE=new CLUSTER_TOKEN=--initial-cluster-token=%s; else CLUSTER_STATE=existing; fi; echo $CLUSTER_STATE; /usr/local/bin/etcd %s", leader, "f0cf44e4-c3f3-4077-a9b8-d33a385e4823", strings.Join(params, " "))
-
-	fmt.Println(args, "<><><><<<<<>>>>>>>>")
 	/*if m.SecurePeer {
 		commands += fmt.Sprintf(" --peer-client-cert-auth=true --peer-trusted-ca-file=%[1]s/peer-ca.crt --peer-cert-file=%[1]s/peer.crt --peer-key-file=%[1]s/peer.key", peerTLSDir)
 	}
@@ -151,7 +144,8 @@ func (c *Controller) createStatefulSet(
 		in.Spec.Template.Spec.Containers = core_util.UpsertContainer(in.Spec.Template.Spec.Containers, core.Container{
 			Name:           api.ResourceSingularEtcd,
 			Image:          c.docker.GetImageWithTag(etcd),
-			Command:        commands,
+			ImagePullPolicy: core.PullAlways,
+			Args:           params,
 			LivenessProbe:  livenessProbe,
 			ReadinessProbe: readinessProbe,
 			Ports: []core.ContainerPort{
