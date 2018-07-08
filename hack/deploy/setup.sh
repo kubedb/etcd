@@ -12,7 +12,7 @@ source "$REPO_ROOT/hack/deploy/settings"
 source "$REPO_ROOT/hack/libbuild/common/lib.sh"
 
 export APPSCODE_ENV=${APPSCODE_ENV:-prod}
-export KUBEDB_SCRIPT="curl -fsSL https://raw.githubusercontent.com/kubedb/cli/0.8.0-beta.3/"
+export KUBEDB_SCRIPT="curl -fsSL https://raw.githubusercontent.com/kubedb/cli/0.8.0/"
 
 if [ "$APPSCODE_ENV" = "dev" ]; then
     detect_tag ''

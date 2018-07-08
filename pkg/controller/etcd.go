@@ -87,10 +87,10 @@ func (c *Controller) create(etcd *api.Etcd) error {
 	fmt.Println(c.GoverningService, ">>>>>>>>>>>>>>>>>>>")
 
 	// ensure database Service
-	vt1, err := c.ensureService(etcd)
+	/*vt1, err := c.ensureService(etcd)
 	if err != nil {
 		return err
-	}
+	}*/
 
 	// ensure database StatefulSet
 	vt2, err := c.ensureEtcdNode(etcd)
@@ -98,7 +98,7 @@ func (c *Controller) create(etcd *api.Etcd) error {
 		return err
 	}
 
-	if vt1 == kutil.VerbCreated && vt2 == kutil.VerbCreated {
+	if vt2 == kutil.VerbCreated {
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
 			c.recorder.Event(
 				ref,
@@ -107,7 +107,7 @@ func (c *Controller) create(etcd *api.Etcd) error {
 				"Successfully created Etcd",
 			)
 		}
-	} else if vt1 == kutil.VerbPatched || vt2 == kutil.VerbPatched {
+	} else if vt2 == kutil.VerbPatched {
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
 			c.recorder.Event(
 				ref,

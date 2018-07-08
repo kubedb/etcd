@@ -1,27 +1,45 @@
 package util
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
+
+const DefaultTimeoutSecond = 5 * time.Second
 
 type Member struct {
 	Name      string
-	service   string
 	Namespace string
-	// ID field can be 0, which is unknown ID.
-	// We know the ID of a member when we get the member information from etcd,
-	// but not from Kubernetes pod list.
-	ID uint64
+	Service   string
 
-	SecurePeer   bool
 	SecureClient bool
+	SecurePeer   bool
+}
+
+func NewMember(name, namespace, service string) *Member {
+	return &Member{
+		Name:         name,
+		Namespace:    namespace,
+		Service:      service,
+		SecureClient: false,
+		SecurePeer:   false,
+	}
+}
+func (m *Member) BuildEtcdArgs() []string {
+	return []string{
+		fmt.Sprintf("--data-dir=%s", "/data/db"),
+		fmt.Sprintf("--name=%s", m.Name),
+		fmt.Sprintf("--initial-advertise-peer-urls=%s", m.PeerURL()),
+		fmt.Sprintf("--listen-peer-urls=%s", m.ListenPeerURL()),
+		fmt.Sprintf("--listen-client-urls=%s", m.ListenClientURL()),
+		fmt.Sprintf("--advertise-client-urls=%s", m.ClientURL()),
+		//	fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")),
+		//fmt.Sprintf("--initial-cluster-token=%s", etcd.OffshootName()),
+	}
 }
 
 func (m *Member) Addr() string {
-	return fmt.Sprintf("%s.%s.%s.svc.cluster.local", m.Name, m.service, m.Namespace)
-}
-
-// ClientURL is the client URL for this member
-func (m *Member) ClientURL() string {
-	return fmt.Sprintf("%s://%s:2379", m.clientScheme(), m.Addr())
+	return fmt.Sprintf("%s.%s.%s.svc.cluster.local", m.Name, m.Service, m.Namespace)
 }
 
 func (m *Member) clientScheme() string {
@@ -49,6 +67,40 @@ func (m *Member) PeerURL() string {
 	return fmt.Sprintf("%s://%s:2380", m.peerScheme(), m.Addr())
 }
 
-func GetEndpointsFromCluster(cluster string)  {
+func (m *Member) ClientURL() string {
+	return fmt.Sprintf("%s://%s:2379", m.clientScheme(), m.Addr())
+}
 
+type MemberSet map[string]*Member
+
+func NewMemberSet(ms ...*Member) MemberSet {
+	res := MemberSet{}
+	for _, m := range ms {
+		res[m.Name] = m
+	}
+	return res
+}
+
+func (ms MemberSet) Add(m *Member) {
+	ms[m.Name] = m
+}
+
+func (ms MemberSet) Remove(name string) {
+	delete(ms, name)
+}
+
+func (ms MemberSet) PeerURLPairs() []string {
+	ps := make([]string, 0)
+	for _, m := range ms {
+		ps = append(ps, fmt.Sprintf("%s=%s", m.Name, m.PeerURL()))
+	}
+	return ps
+}
+
+func (ms MemberSet) ClientURLs() []string {
+	endpoints := make([]string, 0, len(ms))
+	for _, m := range ms {
+		endpoints = append(endpoints, m.ClientURL())
+	}
+	return endpoints
 }

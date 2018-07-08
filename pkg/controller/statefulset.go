@@ -12,6 +12,7 @@ import (
 	core_util "github.com/appscode/kutil/core/v1"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/pkg/eventer"
+	"github.com/kubedb/etcd/pkg/util"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -86,30 +87,22 @@ func (c *Controller) createStatefulSet(
 	if rerr != nil {
 		return nil, kutil.VerbUnchanged, rerr
 	}
-//	leader := fmt.Sprintf("%s-0", etcd.OffshootName())
-	var i int32
-	initialCluster := make([]string, 0)
-	fmt.Println(*etcd.Spec.Replicas, "*************************")
-	for i = 0; i < *etcd.Spec.Replicas ; i++ {
-		podName := fmt.Sprintf("%s-%v", etcd.OffshootName(), i)
-		initialCluster = append(initialCluster,
-			fmt.Sprintf("%s=%s",
-				podName,
-				fmt.Sprintf("http://%s.%s.%s.svc.cluster.local:2380", podName, c.GoverningService, etcd.Namespace)))
-	}
-	fmt.Println(initialCluster, "------------------------------")
 
-	params := []string{
-		"etcd-helper",
-		fmt.Sprintf("--data-dir=%s", "/data/db"),
-		"--name=$(NODE_NAME)",
-		fmt.Sprintf("--initial-advertise-peer-urls=http://$(NODE_NAME).%s.%s.svc.cluster.local:2380", c.GoverningService, etcd.Namespace),
-		"--listen-peer-urls=http://0.0.0.0:2380",
-		"--listen-client-urls=http://0.0.0.0:2379",
-		fmt.Sprintf("--advertise-client-urls=http://$(NODE_NAME).%s.%s.svc.cluster.local:2379", c.GoverningService, etcd.Namespace),
-		fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")),
-		//fmt.Sprintf("--initial-cluster-token=%s", etcd.OffshootName()),
+	ms := util.NewMemberSet()
+
+	var i int32
+	for i = 0; i < *etcd.Spec.Replicas; i++ {
+		podName := fmt.Sprintf("%s-%v", etcd.OffshootName(), i)
+		member := util.NewMember(podName, etcd.Namespace, c.GoverningService)
+		ms.Add(member)
 	}
+
+	leader := util.NewMember("$(NODE_NAME)", etcd.Namespace, c.GoverningService)
+
+	initialCluster := ms.PeerURLPairs()
+	args := append([]string{"etcd-helper"}, leader.BuildEtcdArgs()...)
+	args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")))
+
 	/*if m.SecurePeer {
 		commands += fmt.Sprintf(" --peer-client-cert-auth=true --peer-trusted-ca-file=%[1]s/peer-ca.crt --peer-cert-file=%[1]s/peer.crt --peer-key-file=%[1]s/peer.key", peerTLSDir)
 	}
@@ -142,12 +135,12 @@ func (c *Controller) createStatefulSet(
 		readinessProbe.FailureThreshold = 3
 
 		in.Spec.Template.Spec.Containers = core_util.UpsertContainer(in.Spec.Template.Spec.Containers, core.Container{
-			Name:           api.ResourceSingularEtcd,
-			Image:          c.docker.GetImageWithTag(etcd),
+			Name:            api.ResourceSingularEtcd,
+			Image:           c.docker.GetImageWithTag(etcd),
 			ImagePullPolicy: core.PullAlways,
-			Args:           params,
-			LivenessProbe:  livenessProbe,
-			ReadinessProbe: readinessProbe,
+			Args:            args,
+			LivenessProbe:   livenessProbe,
+			ReadinessProbe:  readinessProbe,
 			Ports: []core.ContainerPort{
 				{
 					Name:          "server",
