@@ -156,7 +156,7 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 	if err != nil {
 		return nil, err
 	}
-	etcd, err := c.mgLister.Etcds(snapshot.Namespace).Get(databaseName)
+	etcd, err := c.etcdLister.Etcds(snapshot.Namespace).Get(databaseName)
 	if err != nil {
 		return nil, err
 	}

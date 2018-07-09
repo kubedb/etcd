@@ -12,6 +12,8 @@ type Member struct {
 	Namespace string
 	Service   string
 
+	ID uint64
+
 	SecureClient bool
 	SecurePeer   bool
 }
@@ -39,7 +41,7 @@ func (m *Member) BuildEtcdArgs() []string {
 }
 
 func (m *Member) Addr() string {
-	return fmt.Sprintf("%s.%s.%s.svc.cluster.local", m.Name, m.Service, m.Namespace)
+	return fmt.Sprintf("%s.%s.%s.svc", m.Name, m.Service, m.Namespace)
 }
 
 func (m *Member) clientScheme() string {
@@ -87,6 +89,13 @@ func (ms MemberSet) Add(m *Member) {
 
 func (ms MemberSet) Remove(name string) {
 	delete(ms, name)
+}
+
+func (ms MemberSet) PickOne() *Member {
+	for _, m := range ms {
+		return m
+	}
+	panic("empty")
 }
 
 func (ms MemberSet) PeerURLPairs() []string {

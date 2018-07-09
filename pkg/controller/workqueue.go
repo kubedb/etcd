@@ -10,10 +10,10 @@ import (
 )
 
 func (c *Controller) initWatcher() {
-	c.mgInformer = c.KubedbInformerFactory.Kubedb().V1alpha1().Etcds().Informer()
-	c.mgQueue = queue.New("Etcd", c.MaxNumRequeues, c.NumThreads, c.runEtcd)
-	c.mgLister = c.KubedbInformerFactory.Kubedb().V1alpha1().Etcds().Lister()
-	c.mgInformer.AddEventHandler(queue.NewEventHandler(c.mgQueue.GetQueue(), func(old interface{}, new interface{}) bool {
+	c.etcdInformer = c.KubedbInformerFactory.Kubedb().V1alpha1().Etcds().Informer()
+	c.etcdQueue = queue.New("Etcd", c.MaxNumRequeues, c.NumThreads, c.runEtcd)
+	c.etcdLister = c.KubedbInformerFactory.Kubedb().V1alpha1().Etcds().Lister()
+	c.etcdInformer.AddEventHandler(queue.NewEventHandler(c.etcdQueue.GetQueue(), func(old interface{}, new interface{}) bool {
 		oldObj := old.(*api.Etcd)
 		newObj := new.(*api.Etcd)
 		return newObj.DeletionTimestamp != nil || !etcdEqual(oldObj, newObj)
@@ -36,7 +36,7 @@ func etcdEqual(old, new *api.Etcd) bool {
 
 func (c *Controller) runEtcd(key string) error {
 	log.Debugln("started processing, key:", key)
-	obj, exists, err := c.mgInformer.GetIndexer().GetByKey(key)
+	obj, exists, err := c.etcdInformer.GetIndexer().GetByKey(key)
 	if err != nil {
 		log.Errorf("Fetching object with key %s from store failed with %v", key, err)
 		return err
@@ -67,7 +67,7 @@ func (c *Controller) runEtcd(key string) error {
 				return in
 			})
 			util.AssignTypeKind(etcd)
-			if err := c.create(etcd); err != nil {
+			if err := c.syncEtcd(etcd); err != nil {
 				log.Errorln(err)
 				c.pushFailureEvent(etcd, err.Error())
 				return err

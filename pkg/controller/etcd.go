@@ -16,9 +16,36 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
+	kwatch "k8s.io/apimachinery/pkg/watch"
+	"context"
 )
 
-func (c *Controller) create(etcd *api.Etcd) error {
+
+func (c *Controller) syncEtcd(etcd *api.Etcd) error {
+	ev := &Event{
+		Type:   kwatch.Added,
+		Object: etcd,
+	}
+
+	if _, ok := c.ctxCancels[etcd.Name]; ok {
+		ev.Type = kwatch.Modified
+	}
+
+	return c.handleEtcdEvent(ev)
+
+}
+
+func (c *Controller) handleEtcdEvent(event *Event) error {
+	etcd := event.Object
+
+	if etcd.Status.Phase == api.DatabasePhaseFailed {
+		if event.Type == kwatch.Deleted {
+			delete(c.ctxCancels, etcd.Name)
+			return nil
+		}
+		return fmt.Errorf("ignore failed cluster (%s). Please delete its CR", etcd.Name)
+	}
+
 	if err := validator.ValidateEtcd(c.Client, c.ExtClient, etcd); err != nil {
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
 			c.recorder.Event(
@@ -66,6 +93,20 @@ func (c *Controller) create(etcd *api.Etcd) error {
 		}
 		etcd.Status = mg.Status
 	}
+
+	switch event.Type {
+	case kwatch.Added:
+		if _, ok := c.ctxCancels[etcd.Name]; ok {
+			return fmt.Errorf("unsafe state. cluster (%s) was created before but we received event (%s)", etcd.Name, event.Type)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		c.ctxCancels[etcd.Name] = cancel
+		c.New(etcd)
+
+
+
+	}
+
 
 	// create Governing Service
 	governingService, err := c.createEtcdGoverningService(etcd)

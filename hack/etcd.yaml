@@ -1,10 +1,10 @@
 apiVersion: kubedb.com/v1alpha1
 kind: Etcd
 metadata:
-  name: demoetcdb
-  namespace: demo1
+  name: etcdb
+  namespace: demo
 spec:
-  replicas: 3
+  replicas: 2
   version: "3.2.13"
   storage:
     storageClassName: "standard"
