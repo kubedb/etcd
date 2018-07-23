@@ -1,17 +1,17 @@
 package util
+
 import (
 	"context"
 	"crypto/tls"
 	"fmt"
-
+	"net/url"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"time"
-	"regexp"
-	"github.com/appscode/errors"
-	"net/url"
-	"strings"
-	rand "k8s.io/apimachinery/pkg/util/rand"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 const (
@@ -19,7 +19,10 @@ const (
 	DefaultRequestTimeout = 5 * time.Second
 
 	randomSuffixLength = 10
-	maxNameLength = 63 - randomSuffixLength - 1
+	maxNameLength      = 63 - randomSuffixLength - 1
+
+	EnvOperatorPodName      = "MY_POD_NAME"
+	EnvOperatorPodNamespace = "MY_POD_NAMESPACE"
 )
 
 func ListMembers(clientURLs []string, tc *tls.Config) (*clientv3.MemberListResponse, error) {
@@ -38,6 +41,24 @@ func ListMembers(clientURLs []string, tc *tls.Config) (*clientv3.MemberListRespo
 	cancel()
 	etcdcli.Close()
 	return resp, err
+}
+
+func RemoveMember(clientURLs []string, tc *tls.Config, id uint64) error {
+	cfg := clientv3.Config{
+		Endpoints:   clientURLs,
+		DialTimeout: DefaultDialTimeout,
+		TLS:         tc,
+	}
+	etcdcli, err := clientv3.New(cfg)
+	if err != nil {
+		return err
+	}
+	defer etcdcli.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultRequestTimeout)
+	_, err = etcdcli.Cluster.MemberRemove(ctx, id)
+	cancel()
+	return err
 }
 
 func (ms MemberSet) IsEqual(other MemberSet) bool {
@@ -65,7 +86,6 @@ func (ms MemberSet) Diff(other MemberSet) MemberSet {
 func (ms MemberSet) Size() int {
 	return len(ms)
 }
-
 
 var validPeerURL = regexp.MustCompile(`^\w+:\/\/[\w\.\-]+(:\d+)?$`)
 

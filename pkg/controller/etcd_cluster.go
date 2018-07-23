@@ -1,26 +1,14 @@
 package controller
 
-
+/*
 import (
 	"fmt"
-	"strings"
-
+	"time"
 	"github.com/appscode/go/log"
-	"github.com/appscode/go/types"
-	mon_api "github.com/appscode/kube-mon/api"
-	"github.com/appscode/kutil"
-	app_util "github.com/appscode/kutil/apps/v1"
-	core_util "github.com/appscode/kutil/core/v1"
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	"github.com/kubedb/apimachinery/pkg/eventer"
-	apps "k8s.io/api/apps/v1"
-	core "k8s.io/api/core/v1"
-	kerr "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/reference"
-	"github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	"github.com/coreos/etcd-operator/pkg/util/k8sutil"
+	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
+	"github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
+	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
 )
 
 func (c *Controller) New(etcd *api.Etcd) {
@@ -53,7 +41,7 @@ func (c *Controller) setup(etcd *api.Etcd) error {
 		return fmt.Errorf("unexpected cluster phase: %s", etcd.Status.Phase)
 	}
 
-	/*if c.isSecureClient() {
+	if c.isSecureClient() {
 		d, err := k8sutil.GetTLSDataFromSecret(c.config.KubeCli, c.cluster.Namespace, c.cluster.Spec.TLS.Static.OperatorSecret)
 		if err != nil {
 			return err
@@ -62,7 +50,7 @@ func (c *Controller) setup(etcd *api.Etcd) error {
 		if err != nil {
 			return err
 		}
-	}*/
+	}
 
 	if shouldCreateCluster {
 		return c.create()
@@ -162,3 +150,4 @@ func (c *Controller) run() {
 		}
 	}
 }
+*/

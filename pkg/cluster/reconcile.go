@@ -4,23 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	"github.com/coreos/etcd-operator/pkg/util/constants"
-	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
-	"github.com/coreos/etcd-operator/pkg/util/k8sutil"
+	"log"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/pborman/uuid"
-	"k8s.io/api/core/v1"
-	"log"
-	"github.com/kubedb/etcd/pkg/util"
-	"github.com/appscode/kutil"
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
+	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
+	"github.com/kubedb/etcd/pkg/util"
+	"k8s.io/api/core/v1"
 )
 
 var ErrLostQuorum = errors.New("lost quorum")
-
 
 func (c *Cluster) reconcile(pods []*v1.Pod) error {
 	sp := c.cluster.Spec
@@ -30,8 +23,7 @@ func (c *Cluster) reconcile(pods []*v1.Pod) error {
 	}
 	//c.status.ClearCondition(api.ClusterConditionScaling)
 
-
-	if needUpgrade(pods, sp) {
+	/*if needUpgrade(pods, sp) {
 		c.status.UpgradeVersionTo(sp.Version)
 
 		m := pickOneOldMember(pods, string(sp.Version))
@@ -40,7 +32,7 @@ func (c *Cluster) reconcile(pods []*v1.Pod) error {
 	c.status.ClearCondition(api.ClusterConditionUpgrading)
 
 	c.status.SetVersion(sp.Version)
-	c.status.SetReadyCondition()
+	c.status.SetReadyCondition()*/
 
 	return nil
 }
@@ -88,7 +80,7 @@ func (c *Cluster) resize() error {
 func (c *Cluster) addOneMember() error {
 	cfg := clientv3.Config{
 		Endpoints:   c.members.ClientURLs(),
-		DialTimeout: constants.DefaultDialTimeout,
+		DialTimeout: util.DefaultDialTimeout,
 		TLS:         c.tlsConfig,
 	}
 	etcdcli, err := clientv3.New(cfg)
@@ -98,7 +90,7 @@ func (c *Cluster) addOneMember() error {
 	defer etcdcli.Close()
 
 	newMember := c.newMember()
-	ctx, cancel := context.WithTimeout(context.Background(), constants.DefaultRequestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), util.DefaultRequestTimeout)
 	resp, err := etcdcli.MemberAdd(ctx, []string{newMember.PeerURL()})
 	cancel()
 	if err != nil {
@@ -107,7 +99,7 @@ func (c *Cluster) addOneMember() error {
 	newMember.ID = resp.Member.ID
 	c.members.Add(newMember)
 
-	_, _, err = c.createPod(newMember, c.members.PeerURLPairs(), c.cluster.Name,  "existing", uuid.New())
+	_, _, err = c.createPod(c.members, newMember, "existing")
 	if err != nil {
 		return fmt.Errorf("fail to create member's pod (%s): %v", newMember.Name, err)
 	}
@@ -160,7 +152,7 @@ func (c *Cluster) removeMember(toRemove *util.Member) (err error) {
 		}
 	}()
 
-	err = etcdutil.RemoveMember(c.members.ClientURLs(), c.tlsConfig, toRemove.ID)
+	err = util.RemoveMember(c.members.ClientURLs(), c.tlsConfig, toRemove.ID)
 	if err != nil {
 		switch err {
 		case rpctypes.ErrMemberNotFound:

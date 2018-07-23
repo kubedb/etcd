@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"context"
+
 	"github.com/appscode/go/log"
 	apiext_util "github.com/appscode/kutil/apiextensions/v1beta1"
 	"github.com/appscode/kutil/tools/queue"
@@ -13,21 +15,20 @@ import (
 	"github.com/kubedb/apimachinery/pkg/controller/dormantdatabase"
 	snapc "github.com/kubedb/apimachinery/pkg/controller/snapshot"
 	"github.com/kubedb/apimachinery/pkg/eventer"
+	"github.com/kubedb/etcd/pkg/cluster"
 	"github.com/kubedb/etcd/pkg/docker"
 	core "k8s.io/api/core/v1"
 	crd_api "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	kwatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/reference"
-	"context"
-	kwatch "k8s.io/apimachinery/pkg/watch"
 )
-
 
 type Event struct {
 	Type   kwatch.EventType
@@ -49,6 +50,7 @@ type Controller struct {
 	selector labels.Selector
 
 	ctxCancels map[string]context.CancelFunc
+	clusters   map[string]*cluster.Cluster
 	// Etcd
 	etcdQueue    *queue.Worker
 	etcdInformer cache.SharedIndexInformer
@@ -81,7 +83,8 @@ func New(
 		selector: labels.SelectorFromSet(map[string]string{
 			api.LabelDatabaseKind: api.ResourceKindEtcd,
 		}),
-		ctxCancels:  map[string]context.CancelFunc{},
+		ctxCancels: map[string]context.CancelFunc{},
+		clusters:   make(map[string]*cluster.Cluster),
 	}
 }
 

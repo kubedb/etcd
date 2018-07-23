@@ -2,33 +2,23 @@ package cluster
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
-	"math"
 	"reflect"
-	"strings"
 	"time"
 
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	cs "github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1"
-	"github.com/kubedb/etcd/pkg/util"
 	dbutil "github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
-	"github.com/coreos/etcd-operator/pkg/util/k8sutil"
-	"github.com/coreos/etcd-operator/pkg/util/retryutil"
-
-	"github.com/pborman/uuid"
+	"github.com/kubedb/etcd/pkg/docker"
+	"github.com/kubedb/etcd/pkg/util"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
-	"github.com/appscode/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"github.com/kubedb/etcd/pkg/docker"
 )
-
 
 var (
 	reconcileInterval         = 8 * time.Second
@@ -49,12 +39,13 @@ type clusterEvent struct {
 type Config struct {
 	ServiceAccount string
 
-	docker docker.Docker
+	docker    docker.Docker
 	KubeCli   kubernetes.Interface
 	EtcdCRCli cs.KubedbV1alpha1Interface
 }
 
 type Cluster struct {
+	logger *logrus.Entry
 	config Config
 
 	cluster *api.Etcd
@@ -77,9 +68,10 @@ type Cluster struct {
 }
 
 func New(config Config, etcd *api.Etcd) *Cluster {
-	lg := logrus.WithField("pkg", "cluster").WithField("cluster-name", cl.Name)
+	lg := logrus.WithField("pkg", "cluster").WithField("cluster-name", etcd.Name)
 
 	c := &Cluster{
+		logger:    lg,
 		config:    config,
 		cluster:   etcd,
 		eventCh:   make(chan *clusterEvent, 100),
@@ -87,14 +79,16 @@ func New(config Config, etcd *api.Etcd) *Cluster {
 		status:    *(etcd.Status.DeepCopy()),
 		eventsCli: config.KubeCli.Core().Events(etcd.Namespace),
 	}
+	fmt.Println("......................................")
 
 	go func() {
 		if err := c.setup(); err != nil {
+			fmt.Println(err,"...........................")
 			if c.status.Phase != api.DatabasePhaseFailed {
-				c.status.SetReason(err.Error())
-				c.status.SetPhase(api.ClusterPhaseFailed)
+				c.status.Reason = err.Error()
+				c.status.Phase = api.DatabasePhaseFailed
 				if err := c.updateCRStatus(); err != nil {
-					c.logger.Errorf("failed to update cluster phase (%v): %v", api.ClusterPhaseFailed, err)
+					c.logger.Errorf("failed to update cluster phase (%v): %v", api.DatabasePhaseFailed, err)
 				}
 			}
 			return
@@ -138,8 +132,9 @@ func (c *Cluster) setup() error {
 func (c *Cluster) create() error {
 	c.status.Phase = api.DatabasePhaseCreating
 
+	fmt.Println("creating..................")
 	if err := c.updateCRStatus(); err != nil {
-		return fmt.Errorf("cluster create: failed to update cluster phase (%v): %v", api.ClusterPhaseCreating, err)
+		return fmt.Errorf("cluster create: failed to update cluster phase (%v): %v", api.DatabasePhaseCreating, err)
 	}
 
 	return c.prepareSeedMember()
@@ -159,21 +154,32 @@ func (c *Cluster) bootstrap() error {
 	return c.startSeedMember()
 }
 
+func (c *Cluster) Update(cl *api.Etcd) {
+	c.send(&clusterEvent{
+		typ:     eventModifyCluster,
+		cluster: cl,
+	})
+}
+
+func (c *Cluster) Delete() {
+	c.logger.Info("cluster is deleted by user")
+	close(c.stopCh)
+}
 
 func (c *Cluster) startSeedMember() error {
-	m := &etcdutil.Member{
-		Name:         k8sutil.UniqueMemberName(c.cluster.Name),
+	m := &util.Member{
+		Name:         util.UniqueMemberName(c.cluster.Name),
 		Namespace:    c.cluster.Namespace,
 		SecurePeer:   c.isSecurePeer(),
 		SecureClient: c.isSecureClient(),
 	}
-	ms := etcdutil.NewMemberSet(m)
-	if err := c.createPod(ms, m, "new"); err != nil {
+	ms := util.NewMemberSet(m)
+	if _, _, err := c.createPod(ms, m, "new"); err != nil {
 		return fmt.Errorf("failed to create seed member (%s): %v", m.Name, err)
 	}
 	c.members = ms
 	c.logger.Infof("cluster created with seed member (%s)", m.Name)
-	_, err := c.eventsCli.Create(k8sutil.NewMemberAddEvent(m.Name, c.cluster))
+	_, err := c.eventsCli.Create(util.NewMemberAddEvent(m.Name, c.cluster))
 	if err != nil {
 		c.logger.Errorf("failed to create new member add event: %v", err)
 	}
@@ -207,27 +213,27 @@ func (c *Cluster) run() {
 			}
 
 		case <-time.After(reconcileInterval):
-			start := time.Now()
+			//start := time.Now()
 
 			if !c.cluster.Spec.DoNotPause {
-				c.status.PauseControl()
+				//c.status.PauseControl()
 				c.logger.Infof("control is paused, skipping reconciliation")
 				continue
 			} else {
-				c.status.Control()
+				//	c.status.Control()
 			}
 
 			running, pending, err := c.pollPods()
 			if err != nil {
-				c.logger.Errorf("fail to poll pods: %v", err)
-				reconcileFailed.WithLabelValues("failed to poll pods").Inc()
+				//	c.logger.Errorf("fail to poll pods: %v", err)
+				//	reconcileFailed.WithLabelValues("failed to poll pods").Inc()
 				continue
 			}
 
 			if len(pending) > 0 {
 				// Pod startup might take long, e.g. pulling image. It would deterministically become running or succeeded/failed later.
-				c.logger.Infof("skip reconciliation: running (%v), pending (%v)", k8sutil.GetPodNames(running), k8sutil.GetPodNames(pending))
-				reconcileFailed.WithLabelValues("not all pods are running").Inc()
+				c.logger.Infof("skip reconciliation: running (%v), pending (%v)", running, pending)
+				//	reconcileFailed.WithLabelValues("not all pods are running").Inc()
 				continue
 			}
 			if len(running) == 0 {
@@ -249,45 +255,43 @@ func (c *Cluster) run() {
 				c.logger.Errorf("failed to reconcile: %v", rerr)
 				break
 			}
-			c.updateMemberStatus(running)
+			//c.updateMemberStatus(running)
 			if err := c.updateCRStatus(); err != nil {
 				c.logger.Warningf("periodic update CR status failed: %v", err)
 			}
 
-			reconcileHistogram.WithLabelValues(c.name()).Observe(time.Since(start).Seconds())
+			//reconcileHistogram.WithLabelValues(c.name()).Observe(time.Since(start).Seconds())
 		}
 
 		if rerr != nil {
-			reconcileFailed.WithLabelValues(rerr.Error()).Inc()
+			//reconcileFailed.WithLabelValues(rerr.Error()).Inc()
 		}
 
-		if isFatalError(rerr) {
+		/*if isFatalError(rerr) {
 			c.status.SetReason(rerr.Error())
 			c.logger.Errorf("cluster failed: %v", rerr)
 			c.reportFailedStatus()
 			return
-		}
+		}*/
 	}
 }
-
 
 func (c *Cluster) handleUpdateEvent(event *clusterEvent) error {
-	oldSpec := c.cluster.Spec.DeepCopy()
+	//	oldSpec := c.cluster.Spec.DeepCopy()
 	c.cluster = event.cluster
 
-	if isSpecEqual(event.cluster.Spec, *oldSpec) {
-		// We have some fields that once created could not be mutated.
-		if !reflect.DeepEqual(event.cluster.Spec, *oldSpec) {
-			c.logger.Infof("ignoring update event: %#v", event.cluster.Spec)
+	/*	if isSpecEqual(event.cluster.Spec, *oldSpec) {
+			// We have some fields that once created could not be mutated.
+			if !reflect.DeepEqual(event.cluster.Spec, *oldSpec) {
+				c.logger.Infof("ignoring update event: %#v", event.cluster.Spec)
+			}
+			return nil
 		}
-		return nil
-	}
-	// TODO: we can't handle another upgrade while an upgrade is in progress
+		// TODO: we can't handle another upgrade while an upgrade is in progress
 
-	c.logSpecUpdate(*oldSpec, event.cluster.Spec)
+		c.logSpecUpdate(*oldSpec, event.cluster.Spec)*/
 	return nil
 }
-
 
 func (c *Cluster) pollPods() (running, pending []*v1.Pod, err error) {
 	podList, err := c.config.KubeCli.Core().Pods(c.cluster.Namespace).List(metav1.ListOptions{
@@ -327,29 +331,44 @@ func (c *Cluster) pollPods() (running, pending []*v1.Pod, err error) {
 	return running, pending, nil
 }
 
-
 func (c *Cluster) removePod(name string) error {
 	ns := c.cluster.Namespace
 	opts := metav1.NewDeleteOptions(podTerminationGracePeriod)
 	err := c.config.KubeCli.Core().Pods(ns).Delete(name, opts)
 	if err != nil {
-		if !k8sutil.IsKubernetesResourceNotFoundError(err) {
+		/*if !util.IsKubernetesResourceNotFoundError(err) {
 			return err
-		}
+		}*/
 	}
 	return nil
 }
 
-func (c *Cluster) isSecurePeer() bool {
-	return c.cluster.Spec.TLS.IsSecurePeer()
+func (c *Cluster) send(ev *clusterEvent) {
+	select {
+	case c.eventCh <- ev:
+		l, ecap := len(c.eventCh), cap(c.eventCh)
+		if l > int(float64(ecap)*0.8) {
+			c.logger.Warningf("eventCh buffer is almost full [%d/%d]", l, ecap)
+		}
+	case <-c.stopCh:
+	}
 }
 
+func (c *Cluster) isSecurePeer() bool {
+	if c.cluster.Spec.TLS == nil || c.cluster.Spec.TLS.Member == nil {
+		return false
+	}
+	return len(c.cluster.Spec.TLS.Member.PeerSecret) != 0
+}
 
 func (c *Cluster) isSecureClient() bool {
-	return c.cluster.Spec.TLS.IsSecureClient()
+	if c.cluster.Spec.TLS == nil {
+		return false
+	}
+	return len(c.cluster.Spec.TLS.OperatorSecret) != 0
 }
 
-func (c *Cluster) updateCRStatus() error  {
+func (c *Cluster) updateCRStatus() error {
 	if reflect.DeepEqual(c.cluster.Status, c.status) {
 		return nil
 	}

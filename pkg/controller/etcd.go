@@ -11,15 +11,14 @@ import (
 	"github.com/kubedb/apimachinery/pkg/eventer"
 	"github.com/kubedb/apimachinery/pkg/storage"
 	validator "github.com/kubedb/etcd/pkg/admission"
+	"github.com/kubedb/etcd/pkg/cluster"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kwatch "k8s.io/apimachinery/pkg/watch"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
-	kwatch "k8s.io/apimachinery/pkg/watch"
-	"context"
 )
-
 
 func (c *Controller) syncEtcd(etcd *api.Etcd) error {
 	ev := &Event{
@@ -27,7 +26,7 @@ func (c *Controller) syncEtcd(etcd *api.Etcd) error {
 		Object: etcd,
 	}
 
-	if _, ok := c.ctxCancels[etcd.Name]; ok {
+	if _, ok := c.clusters[etcd.Name]; ok {
 		ev.Type = kwatch.Modified
 	}
 
@@ -37,10 +36,10 @@ func (c *Controller) syncEtcd(etcd *api.Etcd) error {
 
 func (c *Controller) handleEtcdEvent(event *Event) error {
 	etcd := event.Object
-
+	fmt.Println(event.Type, ">>>>>>>>>>>>>>>>>>>>>>>>>>>")
 	if etcd.Status.Phase == api.DatabasePhaseFailed {
 		if event.Type == kwatch.Deleted {
-			delete(c.ctxCancels, etcd.Name)
+			delete(c.clusters, etcd.Name)
 			return nil
 		}
 		return fmt.Errorf("ignore failed cluster (%s). Please delete its CR", etcd.Name)
@@ -73,7 +72,7 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		return err
 	}
 
-	if etcd.Status.CreationTime == nil {
+	/*if etcd.Status.CreationTime == nil {
 		mg, _, err := util.PatchEtcd(c.ExtClient, etcd, func(in *api.Etcd) *api.Etcd {
 			t := metav1.Now()
 			in.Status.CreationTime = &t
@@ -92,21 +91,40 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 			return err
 		}
 		etcd.Status = mg.Status
-	}
+	}*/
 
 	switch event.Type {
 	case kwatch.Added:
-		if _, ok := c.ctxCancels[etcd.Name]; ok {
+		fmt.Println("into addede...............")
+		if _, ok := c.clusters[etcd.Name]; ok {
 			return fmt.Errorf("unsafe state. cluster (%s) was created before but we received event (%s)", etcd.Name, event.Type)
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		c.ctxCancels[etcd.Name] = cancel
-		c.New(etcd)
+		//ctx, cancel := context.WithCancel(context.Background())
+		//c.ctxCancels[etcd.Name] = cancel
+		//c.New(etcd)
+		cluster := cluster.New(c.makeClusterConfig(), etcd)
+		c.clusters[etcd.Name] = cluster
 
+		/*clustersCreated.Inc()
+		clustersTotal.Inc()*/
+	case kwatch.Modified:
+		if _, ok := c.clusters[etcd.Name]; !ok {
+			return fmt.Errorf("unsafe state. cluster (%s) was never created but we received event (%s)", etcd.Name, event.Type)
+		}
+		c.clusters[etcd.Name].Update(etcd)
+		//clustersModified.Inc()
 
+	case kwatch.Deleted:
+		if _, ok := c.clusters[etcd.Name]; !ok {
+			return fmt.Errorf("unsafe state. cluster (%s) was never created but we received event (%s)", etcd.Name, event.Type)
+		}
+		c.clusters[etcd.Name].Delete()
+		delete(c.clusters, etcd.Name)
+		/*clustersDeleted.Inc()
+		clustersTotal.Dec()*/
 
 	}
-
+	return nil
 
 	// create Governing Service
 	governingService, err := c.createEtcdGoverningService(etcd)
@@ -216,6 +234,14 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 	}
 
 	return nil
+}
+
+func (c *Controller) makeClusterConfig() cluster.Config {
+	return cluster.Config{
+		//ServiceAccount: c.Config.ServiceAccount,
+		KubeCli:   c.Controller.Client,
+		EtcdCRCli: c.Controller.ExtClient,
+	}
 }
 
 func (c *Controller) ensureEtcdNode(etcd *api.Etcd) (kutil.VerbType, error) {

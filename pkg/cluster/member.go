@@ -3,13 +3,10 @@ package cluster
 import (
 	"fmt"
 
-	"github.com/kubedb/etcd/pkg/util"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
+	"github.com/kubedb/etcd/pkg/util"
 	"github.com/pkg/errors"
-
 	"k8s.io/api/core/v1"
-	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
-	"github.com/coreos/etcd-operator/pkg/util/k8sutil"
 )
 
 func (c *Cluster) updateMembers(known util.MemberSet) error {
@@ -45,7 +42,6 @@ func (c *Cluster) newMember() *util.Member {
 		SecureClient: c.isSecureClient(),
 	}
 }
-
 
 func podsToMemberSet(pods []*v1.Pod, sc bool) util.MemberSet {
 	members := util.MemberSet{}

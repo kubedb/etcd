@@ -13,29 +13,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
-
 )
 
 const (
 	// EtcdClientPort is the client port on client service and etcd nodes.
 	EtcdClientPort = 2379
 
-	etcdVolumeMountDir       = "/var/etcd"
-	dataDir                  = etcdVolumeMountDir + "/data"
-	peerTLSDir               = "/etc/etcdtls/member/peer-tls"
-	peerTLSVolume            = "member-peer-tls"
-	serverTLSDir             = "/etc/etcdtls/member/server-tls"
-	serverTLSVolume          = "member-server-tls"
-
+	etcdVolumeMountDir = "/var/etcd"
+	dataDir            = etcdVolumeMountDir + "/data"
+	peerTLSDir         = "/etc/etcdtls/member/peer-tls"
+	peerTLSVolume      = "member-peer-tls"
+	serverTLSDir       = "/etc/etcdtls/member/server-tls"
+	serverTLSVolume    = "member-server-tls"
 
 	defaultDNSTimeout = int64(0)
 )
 
-func (c *Cluster) createPod(m *util.Member, initialCluster []string, clusterName, state, token string) (*core.Pod, kutil.VerbType, error) {
+func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string) (*core.Pod, kutil.VerbType, error) {
+	initialCluster := members.PeerURLPairs()
 	podMeta := metav1.ObjectMeta{
 		Name:      m.Name,
 		Namespace: m.Namespace,
 	}
+	token := c.cluster.Name
 
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, c.cluster)
 	if rerr != nil {
@@ -80,7 +80,7 @@ func (c *Cluster) createPod(m *util.Member, initialCluster []string, clusterName
 			Name:            api.ResourceSingularEtcd,
 			Image:           c.config.docker.GetImageWithTag(c.cluster),
 			ImagePullPolicy: core.PullAlways,
-			Command:            strings.Split(commands, " "),
+			Command:         strings.Split(commands, " "),
 			LivenessProbe:   livenessProbe,
 			ReadinessProbe:  readinessProbe,
 			Ports: []core.ContainerPort{
@@ -136,7 +136,6 @@ func (c *Cluster) createPod(m *util.Member, initialCluster []string, clusterName
 		in = upsertEnv(in, c.cluster)
 		in = upsertDataVolume(in, c.cluster)
 
-
 		in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, core.Container{
 			Image: "busybox:1.28.0-glibc",
 			Name:  "check-dns",
@@ -154,7 +153,6 @@ func (c *Cluster) createPod(m *util.Member, initialCluster []string, clusterName
 						sleep 1
 					done`, DNSTimeout, m.Addr())},
 		})
-
 
 		return in
 	})
@@ -261,4 +259,3 @@ func upsertEnv(pod *core.Pod, etcd *api.Etcd) *core.Pod {
 	}
 	return pod
 }
-

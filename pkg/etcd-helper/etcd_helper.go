@@ -34,7 +34,6 @@ func RunEtcdHelper(etcdConf *etcdmain.Config) {
 	leaderName := fmt.Sprintf("%s-0", statefulSetName)
 	governingService := fmt.Sprintf("%s-gvs", statefulSetName)
 
-
 	ms := util.NewMemberSet()
 	replica, err := strconv.Atoi(parts[len(parts)-1])
 	if err != nil {
@@ -77,7 +76,6 @@ func RunEtcdHelper(etcdConf *etcdmain.Config) {
 	args := leader.BuildEtcdArgs()
 	args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(ms.PeerURLPairs(), ",")))
 	args = append(args, fmt.Sprintf("--initial-cluster-state=%s", clusterState))
-
 
 	/*if m.SecurePeer {
 		commands += fmt.Sprintf(" --peer-client-cert-auth=true --peer-trusted-ca-file=%[1]s/peer-ca.crt --peer-cert-file=%[1]s/peer.crt --peer-key-file=%[1]s/peer.key", peerTLSDir)

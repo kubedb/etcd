@@ -1,31 +1,24 @@
 package util
 
 import (
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/api/core/v1"
-	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
-	"fmt"
-	"strings"
-	app_util "github.com/appscode/kutil/core/v1"
 )
-const(
-	etcdVolumeMountDir       = "/var/db"
-	dataDir                  = etcdVolumeMountDir + "/data"
-	operatorEtcdTLSDir       = "/etc/etcdtls/operator/etcd-tls"
-	etcdVolumeName = "etcd-data"
-	peerTLSDir               = "/etc/etcdtls/member/peer-tls"
-	peerTLSVolume            = "member-peer-tls"
-	serverTLSDir             = "/etc/etcdtls/member/server-tls"
-	serverTLSVolume          = "member-server-tls"
-	operatorEtcdTLSDir       = "/etc/etcdtls/operator/etcd-tls"
-	operatorEtcdTLSVolume    = "etcd-client-tls"
+
+const (
+	etcdVolumeMountDir    = "/var/db"
+	dataDir               = etcdVolumeMountDir + "/data"
+	operatorEtcdTLSDir    = "/etc/etcdtls/operator/etcd-tls"
+	etcdVolumeName        = "etcd-data"
+	peerTLSDir            = "/etc/etcdtls/member/peer-tls"
+	peerTLSVolume         = "member-peer-tls"
+	serverTLSDir          = "/etc/etcdtls/member/server-tls"
+	serverTLSVolume       = "member-server-tls"
+	operatorEtcdTLSVolume = "etcd-client-tls"
 
 	etcdVersionAnnotationKey = "etcd.version"
 
 	defaultDNSTimeout = int64(0)
-	EtcdClientPort = 2379
-
+	EtcdClientPort    = 2379
 )
 
 func GetEtcdVersion(pod *v1.Pod) string {
@@ -36,16 +29,15 @@ func SetEtcdVersion(pod *v1.Pod, version string) {
 	pod.Annotations[etcdVersionAnnotationKey] = version
 }
 
-func NewEtcdPod(m *Member, initialCluster []string, clusterName, state, token string, cs api.EtcdSpec, owner metav1.OwnerReference) *v1.Pod {
+/*func NewEtcdPod(m *Member, initialCluster []string, clusterName, state, token string, cs api.EtcdSpec, owner metav1.OwnerReference) *v1.Pod {
 	app_util.CreateOrPatchPod()
 	pod := newEtcdPod(m, initialCluster, clusterName, state, token, cs)
 	applyPodPolicy(clusterName, pod, cs.Pod)
 	addOwnerRefToObject(pod.GetObjectMeta(), owner)
 	return pod
-}
+}*/
 
-
-func newEtcdPod(m *Member, initialCluster []string, clusterName, state, token string, etcd api.EtcdSpec) *v1.Pod {
+/*func newEtcdPod(m *Member, initialCluster []string, clusterName, state, token string, etcd api.EtcdSpec) *v1.Pod {
 	commands := fmt.Sprintf("/usr/local/bin/etcd --data-dir=%s --name=%s --initial-advertise-peer-urls=%s "+
 		"--listen-peer-urls=%s --listen-client-urls=%s --advertise-client-urls=%s "+
 		"--initial-cluster=%s --initial-cluster-state=%s",
@@ -203,9 +195,9 @@ func etcdContainer(cmd []string, repo, version string) v1.Container {
 	return c
 }
 
-
 func etcdVolumeMounts() []v1.VolumeMount {
 	return []v1.VolumeMount{
 		{Name: etcdVolumeName, MountPath: etcdVolumeMountDir},
 	}
 }
+*/
