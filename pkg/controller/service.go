@@ -16,6 +16,8 @@ import (
 	"k8s.io/client-go/tools/reference"
 )
 
+const TolerateUnreadyEndpointsAnnotation = "service.alpha.kubernetes.io/tolerate-unready-endpoints"
+
 func (c *Controller) ensureService(etcd *api.Etcd) (kutil.VerbType, error) {
 	// Check if service name exists
 	if err := c.checkService(etcd); err != nil {
@@ -51,7 +53,7 @@ func (c *Controller) ensureService(etcd *api.Etcd) (kutil.VerbType, error) {
 }
 
 func (c *Controller) checkService(etcd *api.Etcd) error {
-	name := etcd.OffshootName()
+	name := etcd.OffshootName() + "-client"
 	service, err := c.Client.CoreV1().Services(etcd.Namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		if kerr.IsNotFound(err) {
@@ -69,8 +71,11 @@ func (c *Controller) checkService(etcd *api.Etcd) error {
 
 func (c *Controller) createClientService(etcd *api.Etcd) (kutil.VerbType, error) {
 	meta := metav1.ObjectMeta{
-		Name:      etcd.OffshootName(),
+		Name:      etcd.OffshootName() + "-client",
 		Namespace: etcd.Namespace,
+		Annotations: map[string]string{
+			TolerateUnreadyEndpointsAnnotation: "true",
+		},
 	}
 
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd)
@@ -92,6 +97,9 @@ func (c *Controller) createPeerService(etcd *api.Etcd) (kutil.VerbType, error) {
 	meta := metav1.ObjectMeta{
 		Name:      etcd.OffshootName(),
 		Namespace: etcd.Namespace,
+		Annotations: map[string]string{
+			TolerateUnreadyEndpointsAnnotation: "true",
+		},
 	}
 
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd)
@@ -104,7 +112,8 @@ func (c *Controller) createPeerService(etcd *api.Etcd) (kutil.VerbType, error) {
 		in.Labels = etcd.OffshootLabels()
 		in.Spec.Ports = upsertPeerServicePort(in, etcd)
 		in.Spec.Selector = etcd.OffshootLabels()
-		//in.Spec.ClusterIP = core.ClusterIPNone
+		in.Spec.ClusterIP = core.ClusterIPNone
+		in.Spec.Type = core.ServiceTypeClusterIP
 		return in
 	})
 	return ok, err
@@ -164,9 +173,12 @@ func (c *Controller) createEtcdGoverningService(etcd *api.Etcd) (string, error) 
 
 	service := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      etcd.ServiceName() + "-gvs",
+			Name:      etcd.ServiceName(),
 			Labels:    etcd.OffshootLabels(),
 			Namespace: etcd.Namespace,
+			Annotations: map[string]string{
+				TolerateUnreadyEndpointsAnnotation: "true",
+			},
 		},
 		Spec: core.ServiceSpec{
 			Type:      core.ServiceTypeClusterIP,

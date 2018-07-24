@@ -11,6 +11,7 @@ import (
 	"github.com/kubedb/etcd/pkg/util"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
 )
@@ -19,7 +20,7 @@ const (
 	// EtcdClientPort is the client port on client service and etcd nodes.
 	EtcdClientPort = 2379
 
-	etcdVolumeMountDir = "/var/etcd"
+	etcdVolumeMountDir = "/data/db"
 	dataDir            = etcdVolumeMountDir + "/data"
 	peerTLSDir         = "/etc/etcdtls/member/peer-tls"
 	peerTLSVolume      = "member-peer-tls"
@@ -56,16 +57,20 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 		commands = fmt.Sprintf("%s --initial-cluster-token=%s", commands, token)
 	}
 
-	DNSTimeout := defaultDNSTimeout
+	/*DNSTimeout := defaultDNSTimeout
 
+	_, err := createPodPvc(c.config.KubeCli, m, c.cluster)
+	if err != nil {
+		return nil, kutil.VerbUnchanged, err
+	}*/
 	return core_util.CreateOrPatchPod(c.config.KubeCli, podMeta, func(in *core.Pod) *core.Pod {
 		in.ObjectMeta = core_util.EnsureOwnerReference(in.ObjectMeta, ref)
 		in.Labels = core_util.UpsertMap(in.Labels, c.cluster.StatefulSetLabels())
-		in.Labels = core_util.UpsertMap(in.Labels, map[string]string{
+		/*in.Labels = core_util.UpsertMap(in.Labels, map[string]string{
 			"app":          "etcd",
 			"etcd_node":    m.Name,
 			"etcd_cluster": c.cluster.Name,
-		})
+		})*/
 		in.Annotations = core_util.UpsertMap(in.Annotations, map[string]string{
 			//"etcd.version": c.cluster.Spec.Version
 		})
@@ -78,7 +83,7 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 		readinessProbe.FailureThreshold = 3
 		in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, core.Container{
 			Name:            api.ResourceSingularEtcd,
-			Image:           c.config.docker.GetImageWithTag(c.cluster),
+			Image:           c.config.Docker.GetImageWithTag(c.cluster),
 			ImagePullPolicy: core.PullAlways,
 			Command:         strings.Split(commands, " "),
 			LivenessProbe:   livenessProbe,
@@ -133,25 +138,24 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 				},
 			)
 		}*/
+
+		in.Spec.RestartPolicy = core.RestartPolicyNever
+		in.Spec.Hostname = m.Name
+		in.Spec.Subdomain = c.cluster.Name
+		in.Spec.AutomountServiceAccountToken = func(b bool) *bool { return &b }(false)
+
+		createPodPvc(c.config.KubeCli, m, c.cluster)
 		in = upsertEnv(in, c.cluster)
 		in = upsertDataVolume(in, c.cluster)
 
-		in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, core.Container{
+		in.Spec.InitContainers = core_util.UpsertContainer(in.Spec.InitContainers, core.Container{
 			Image: "busybox:1.28.0-glibc",
 			Name:  "check-dns",
 			Command: []string{"/bin/sh", "-c", fmt.Sprintf(`
-					TIMEOUT_READY=%d
 					while ( ! nslookup %s )
 					do
-						# If TIMEOUT_READY is 0 we should never time out and exit
-						TIMEOUT_READY=$(( TIMEOUT_READY-1 ))
-                        if [ $TIMEOUT_READY -eq 0 ];
-				        then
-				            echo "Timed out waiting for DNS entry"
-				            exit 1
-				        fi
 						sleep 1
-					done`, DNSTimeout, m.Addr())},
+					done`, m.Addr())},
 		})
 
 		return in
@@ -191,6 +195,9 @@ func upsertDataVolume(pod *core.Pod, etcd *api.Etcd) *core.Pod {
 			pod.Spec.Containers[i].VolumeMounts = volumeMounts
 
 			pvcSpec := etcd.Spec.Storage
+			volume := core.Volume{
+				Name: "data",
+			}
 			if pvcSpec != nil {
 				if len(pvcSpec.AccessModes) == 0 {
 					pvcSpec.AccessModes = []core.PersistentVolumeAccessMode{
@@ -199,29 +206,20 @@ func upsertDataVolume(pod *core.Pod, etcd *api.Etcd) *core.Pod {
 					log.Infof(`Using "%v" as AccessModes in etcd.Spec.Storage`, core.ReadWriteOnce)
 				}
 
-				volumeClaim := core.PersistentVolumeClaim{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "data",
+				volume.VolumeSource = core.VolumeSource{
+					PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
+						ClaimName: pod.Name,
 					},
-					Spec: *pvcSpec,
-				}
-				if pvcSpec.StorageClassName != nil {
-					volumeClaim.Annotations = map[string]string{
-						"volume.beta.kubernetes.io/storage-class": *pvcSpec.StorageClassName,
-					}
 				}
 			} else {
-				volume := core.Volume{
-					Name: "data",
-					VolumeSource: core.VolumeSource{
-						EmptyDir: &core.EmptyDirVolumeSource{},
-					},
+				volume.VolumeSource = core.VolumeSource{
+					EmptyDir: &core.EmptyDirVolumeSource{},
 				}
-				volumes := pod.Spec.Volumes
-				volumes = core_util.UpsertVolume(volumes, volume)
-				pod.Spec.Volumes = volumes
-				return pod
 			}
+
+			volumeClaims := pod.Spec.Volumes
+			volumeClaims = core_util.UpsertVolume(volumeClaims, volume)
+			pod.Spec.Volumes = volumeClaims
 			break
 		}
 	}
@@ -258,4 +256,27 @@ func upsertEnv(pod *core.Pod, etcd *api.Etcd) *core.Pod {
 		}
 	}
 	return pod
+}
+
+func createPodPvc(client kubernetes.Interface, m *util.Member, etcd *api.Etcd) (*core.PersistentVolumeClaim, error) {
+	if etcd.Spec.Storage != nil {
+		pvc := &core.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      m.Name,
+				Namespace: etcd.Namespace,
+				Labels: map[string]string{
+					"etcd_cluster": etcd.Name,
+					"app":          "etcd",
+				},
+			},
+			Spec: *etcd.Spec.Storage,
+		}
+		ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd)
+		if rerr != nil {
+			return nil, rerr
+		}
+		pvc.ObjectMeta = core_util.EnsureOwnerReference(pvc.ObjectMeta, ref)
+		return client.CoreV1().PersistentVolumeClaims(etcd.Namespace).Create(pvc)
+	}
+	return nil, nil
 }

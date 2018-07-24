@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -41,7 +42,7 @@ func (m *Member) BuildEtcdArgs() []string {
 }
 
 func (m *Member) Addr() string {
-	return fmt.Sprintf("%s.%s.%s.svc", m.Name, m.Service, m.Namespace)
+	return fmt.Sprintf("%s.%s.%s.svc", m.Name, clusterNameFromMemberName(m.Name), m.Namespace)
 }
 
 func (m *Member) clientScheme() string {
@@ -112,4 +113,12 @@ func (ms MemberSet) ClientURLs() []string {
 		endpoints = append(endpoints, m.ClientURL())
 	}
 	return endpoints
+}
+
+func clusterNameFromMemberName(mn string) string {
+	i := strings.LastIndex(mn, "-")
+	if i == -1 {
+		panic(fmt.Sprintf("unexpected member name: %s", mn))
+	}
+	return mn[:i]
 }

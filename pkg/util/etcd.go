@@ -56,6 +56,7 @@ func RemoveMember(clientURLs []string, tc *tls.Config, id uint64) error {
 	defer etcdcli.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), DefaultRequestTimeout)
+
 	_, err = etcdcli.Cluster.MemberRemove(ctx, id)
 	cancel()
 	return err

@@ -11,6 +11,7 @@ import (
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/etcd/pkg/util"
 	"k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 )
 
 var ErrLostQuorum = errors.New("lost quorum")
@@ -83,6 +84,7 @@ func (c *Cluster) addOneMember() error {
 		DialTimeout: util.DefaultDialTimeout,
 		TLS:         c.tlsConfig,
 	}
+	fmt.Println(cfg, "-----------", c.members.ClientURLs())
 	etcdcli, err := clientv3.New(cfg)
 	if err != nil {
 		return fmt.Errorf("add one member failed: creating etcd client failed %v", err)
@@ -132,15 +134,16 @@ func (c *Cluster) addOneMember() error {
 }
 
 func (c *Cluster) removeOneMember() error {
+	fmt.Println("removing member..........................")
 	return c.removeMember(c.members.PickOne())
 }
 
 func (c *Cluster) removeDeadMember(toRemove *util.Member) error {
 	log.Println("removing dead member %q", toRemove.Name)
-	/*_, err := c.eventsCli.Create(k8sutil.ReplacingDeadMemberEvent(toRemove.Name, c.cluster))
+	_, err := c.eventsCli.Create(util.ReplacingDeadMemberEvent(toRemove.Name, c.cluster))
 	if err != nil {
 		c.logger.Errorf("failed to create replacing dead member event: %v", err)
-	}*/
+	}
 
 	return c.removeMember(toRemove)
 }
@@ -156,7 +159,7 @@ func (c *Cluster) removeMember(toRemove *util.Member) (err error) {
 	if err != nil {
 		switch err {
 		case rpctypes.ErrMemberNotFound:
-			log.Println("etcd member (%v) has been removed", toRemove.Name)
+			log.Println("etcd member (%v) has been removed with id ", toRemove.Name, toRemove.ID)
 		default:
 			return err
 		}
@@ -166,15 +169,24 @@ func (c *Cluster) removeMember(toRemove *util.Member) (err error) {
 	if err := c.removePod(toRemove.Name); err != nil {
 		return err
 	}
-	/*if c.isPodPVEnabled() {
-		err = c.removePVC(k8sutil.PVCNameFromMember(toRemove.Name))
+	if c.cluster.Spec.Storage != nil {
+		err = c.removePVC(toRemove.Name)
 		if err != nil {
 			return err
 		}
 	}
-	c.logger.Infof("removed member (%v) with ID (%d)", toRemove.Name, toRemove.ID)*/
+	c.logger.Infof("removed member (%v) with ID (%d)", toRemove.Name, toRemove.ID)
 	return nil
 }
+
+func (c *Cluster) removePVC(pvcName string) error {
+	err := c.config.KubeCli.Core().PersistentVolumeClaims(c.cluster.Namespace).Delete(pvcName, nil)
+	if err != nil && !kerr.IsNotFound(err) {
+		return fmt.Errorf("remove pvc (%s) failed: %v", pvcName, err)
+	}
+	return nil
+}
+
 
 func needUpgrade(pods []*v1.Pod, cs api.EtcdSpec) bool {
 	return len(pods) == int(*cs.Replicas) && pickOneOldMember(pods, string(cs.Version)) != nil

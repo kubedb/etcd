@@ -39,7 +39,7 @@ type clusterEvent struct {
 type Config struct {
 	ServiceAccount string
 
-	docker    docker.Docker
+	Docker    docker.Docker
 	KubeCli   kubernetes.Interface
 	EtcdCRCli cs.KubedbV1alpha1Interface
 }
@@ -83,7 +83,7 @@ func New(config Config, etcd *api.Etcd) *Cluster {
 
 	go func() {
 		if err := c.setup(); err != nil {
-			fmt.Println(err,"...........................")
+			fmt.Println(err, "...........................")
 			if c.status.Phase != api.DatabasePhaseFailed {
 				c.status.Reason = err.Error()
 				c.status.Phase = api.DatabasePhaseFailed
@@ -188,6 +188,9 @@ func (c *Cluster) startSeedMember() error {
 }
 
 func (c *Cluster) run() {
+	if err := c.setupServices(); err != nil {
+		c.logger.Errorf("fail to setup etcd services: %v", err)
+	}
 	c.status.Phase = api.DatabasePhaseCreating
 	if err := c.updateCRStatus(); err != nil {
 		fmt.Println("W: update initial CR status failed: %v", err)
@@ -215,24 +218,24 @@ func (c *Cluster) run() {
 		case <-time.After(reconcileInterval):
 			//start := time.Now()
 
-			if !c.cluster.Spec.DoNotPause {
+			/*if !c.cluster.Spec.DoNotPause {
 				//c.status.PauseControl()
 				c.logger.Infof("control is paused, skipping reconciliation")
 				continue
 			} else {
 				//	c.status.Control()
-			}
+			}*/
 
 			running, pending, err := c.pollPods()
 			if err != nil {
-				//	c.logger.Errorf("fail to poll pods: %v", err)
+				c.logger.Errorf("fail to poll pods: %v", err)
 				//	reconcileFailed.WithLabelValues("failed to poll pods").Inc()
 				continue
 			}
 
 			if len(pending) > 0 {
 				// Pod startup might take long, e.g. pulling image. It would deterministically become running or succeeded/failed later.
-				c.logger.Infof("skip reconciliation: running (%v), pending (%v)", running, pending)
+				c.logger.Infof("skip reconciliation: running (%v), pending (%v)", util.GetPodNames(running), util.GetPodNames(pending))
 				//	reconcileFailed.WithLabelValues("not all pods are running").Inc()
 				continue
 			}
@@ -295,10 +298,7 @@ func (c *Cluster) handleUpdateEvent(event *clusterEvent) error {
 
 func (c *Cluster) pollPods() (running, pending []*v1.Pod, err error) {
 	podList, err := c.config.KubeCli.Core().Pods(c.cluster.Namespace).List(metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(map[string]string{
-			"etcd_cluster": c.cluster.Name,
-			"app":          "etcd",
-		}).String(),
+		LabelSelector: labels.SelectorFromSet(c.cluster.StatefulSetLabels()).String(),
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to list running pods: %v", err)
@@ -341,6 +341,17 @@ func (c *Cluster) removePod(name string) error {
 		}*/
 	}
 	return nil
+}
+
+func (c *Cluster) setupServices() error {
+	err := c.CreateClientService()
+	fmt.Println(err, "..........")
+	if err != nil {
+		return err
+	}
+	fmt.Println("creating peer service..............")
+
+	return c.CreatePeerService()
 }
 
 func (c *Cluster) send(ev *clusterEvent) {

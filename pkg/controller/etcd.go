@@ -91,8 +91,33 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 			return err
 		}
 		etcd.Status = mg.Status
-	}*/
+	}
+	*/
+	// create Governing Service
+	/*governingService, err := c.createPeerService(etcd)
+	if err != nil {
+		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
+			c.recorder.Eventf(
+				ref,
+				core.EventTypeWarning,
+				eventer.EventReasonFailedToCreate,
+				`Failed to create Service: "%v". Reason: %v`,
+				governingService,
+				err,
+			)
+		}
+		return err
+	}
+	fmt.Println(governingService, "-----------")
+	c.GoverningService = etcd.Name
+	fmt.Println(c.GoverningService, ">>>>>>>>>>>>>>>>>>>")
 
+	// ensure database Service
+	_, err = c.ensureService(etcd)
+	if err != nil {
+		return err
+	}
+	*/
 	switch event.Type {
 	case kwatch.Added:
 		fmt.Println("into addede...............")
@@ -125,31 +150,6 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 
 	}
 	return nil
-
-	// create Governing Service
-	governingService, err := c.createEtcdGoverningService(etcd)
-	if err != nil {
-		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
-			c.recorder.Eventf(
-				ref,
-				core.EventTypeWarning,
-				eventer.EventReasonFailedToCreate,
-				`Failed to create Service: "%v". Reason: %v`,
-				governingService,
-				err,
-			)
-		}
-		return err
-	}
-	fmt.Println(governingService, "-----------")
-	c.GoverningService = governingService
-	fmt.Println(c.GoverningService, ">>>>>>>>>>>>>>>>>>>")
-
-	// ensure database Service
-	/*vt1, err := c.ensureService(etcd)
-	if err != nil {
-		return err
-	}*/
 
 	// ensure database StatefulSet
 	vt2, err := c.ensureEtcdNode(etcd)
@@ -241,6 +241,7 @@ func (c *Controller) makeClusterConfig() cluster.Config {
 		//ServiceAccount: c.Config.ServiceAccount,
 		KubeCli:   c.Controller.Client,
 		EtcdCRCli: c.Controller.ExtClient,
+		Docker:    c.docker,
 	}
 }
 

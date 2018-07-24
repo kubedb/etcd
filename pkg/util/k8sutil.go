@@ -201,3 +201,14 @@ func etcdVolumeMounts() []v1.VolumeMount {
 	}
 }
 */
+
+func GetPodNames(pods []*v1.Pod) []string {
+	if len(pods) == 0 {
+		return nil
+	}
+	res := []string{}
+	for _, p := range pods {
+		res = append(res, p.Name)
+	}
+	return res
+}
