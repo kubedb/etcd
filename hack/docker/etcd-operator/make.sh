@@ -13,7 +13,7 @@ REPO_ROOT=$GOPATH/src/github.com/kubedb/etcd
 source "$REPO_ROOT/hack/libbuild/common/kubedb_image.sh"
 
 APPSCODE_ENV=${APPSCODE_ENV:-dev}
-DOCKER_REGISTRY=${DOCKER_REGISTRY:-sanjid}
+DOCKER_REGISTRY=${DOCKER_REGISTRY:-kubedb}
 IMG=etcd-operator
 
 DIST=$GOPATH/src/github.com/kubedb/etcd/dist

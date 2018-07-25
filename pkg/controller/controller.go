@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"context"
-
 	"github.com/appscode/go/log"
 	apiext_util "github.com/appscode/kutil/apiextensions/v1beta1"
 	"github.com/appscode/kutil/tools/queue"
@@ -49,8 +47,7 @@ type Controller struct {
 	// labelselector for event-handler of Snapshot, Dormant and Job
 	selector labels.Selector
 
-	ctxCancels map[string]context.CancelFunc
-	clusters   map[string]*cluster.Cluster
+	clusters map[string]*cluster.Cluster
 	// Etcd
 	etcdQueue    *queue.Worker
 	etcdInformer cache.SharedIndexInformer
@@ -83,8 +80,7 @@ func New(
 		selector: labels.SelectorFromSet(map[string]string{
 			api.LabelDatabaseKind: api.ResourceKindEtcd,
 		}),
-		ctxCancels: map[string]context.CancelFunc{},
-		clusters:   make(map[string]*cluster.Cluster),
+		clusters: make(map[string]*cluster.Cluster),
 	}
 }
 

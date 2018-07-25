@@ -6,9 +6,11 @@ import (
 	"github.com/appscode/kutil/tools/analytics"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/pkg/storage"
+	"github.com/kubedb/etcd/pkg/cluster"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"path/filepath"
 )
 
 const (
@@ -63,6 +65,28 @@ func (c *Controller) createRestoreJob(etcd *api.Etcd, snapshot *api.Snapshot) (*
 				},
 				Spec: core.PodSpec{
 					Containers: []core.Container{
+						{
+							Name:  "restore-datadir",
+							Image: c.docker.GetToolsImageWithTag(etcd),
+							Command: []string{
+								"/bin/sh", "-ec",
+								fmt.Sprintf("ETCDCTL_API=3 etcdctl snapshot restore %[1]s"+
+									" --name %[2]s"+
+									" --initial-cluster %[2]s=%[3]s"+
+									" --initial-cluster-token %[4]s"+
+									" --initial-advertise-peer-urls %[3]s"+
+									" --data-dir %[5]s 2>/dev/termination-log", filepath.Join(snapshotDumpDir, snapshot.Name), m.Name, m.PeerURL(), token, dataDir),
+							},
+							Resources: snapshot.Spec.Resources,
+							VolumeMounts: []core.VolumeMount{
+								{
+									Name:      persistentVolume.Name,
+									MountPath: snapshotDumpDir,
+								},
+							},
+						},
+					},
+					InitContainers: []core.Container{
 						{
 							Name:  snapshotProcessRestore,
 							Image: c.docker.GetToolsImageWithTag(etcd),
@@ -167,6 +191,7 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 		return nil, err
 	}
 
+	endpoints := fmt.Sprintf("%s.%s", cluster.ClientServiceName(etcd.Name), etcd.Namespace)
 	// Folder name inside Cloud bucket where backup will be uploaded
 	folderName, _ := snapshot.Location()
 
@@ -196,8 +221,8 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 							Image: c.docker.GetToolsImageWithTag(etcd),
 							Args: []string{
 								snapshotProcessBackup,
-								fmt.Sprintf(`--host=%s`, databaseName),
-								fmt.Sprintf(`--user=%s`, etcdUser),
+								fmt.Sprintf(`--host=%s`, endpoints),
+								//fmt.Sprintf(`--user=%s`, etcdUser),
 								fmt.Sprintf(`--data-dir=%s`, snapshotDumpDir),
 								fmt.Sprintf(`--bucket=%s`, bucket),
 								fmt.Sprintf(`--folder=%s`, folderName),
@@ -208,17 +233,6 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 								{
 									Name:  analytics.Key,
 									Value: c.AnalyticsClientID,
-								},
-								{
-									Name: "DB_PASSWORD",
-									ValueFrom: &core.EnvVarSource{
-										SecretKeyRef: &core.SecretKeySelector{
-											LocalObjectReference: core.LocalObjectReference{
-												Name: etcd.Spec.DatabaseSecret.SecretName,
-											},
-											Key: KeyEtcdPassword,
-										},
-									},
 								},
 							},
 							Resources: snapshot.Spec.Resources,

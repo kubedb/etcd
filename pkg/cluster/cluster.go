@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/appscode/go/log/golog"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	cs "github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1"
 	dbutil "github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
@@ -39,9 +40,11 @@ type clusterEvent struct {
 type Config struct {
 	ServiceAccount string
 
-	Docker    docker.Docker
-	KubeCli   kubernetes.Interface
-	EtcdCRCli cs.KubedbV1alpha1Interface
+	LoggerOptions   golog.Options
+	Docker          docker.Docker
+	KubeCli         kubernetes.Interface
+	EtcdCRCli       cs.KubedbV1alpha1Interface
+	EnableAnalytics bool
 }
 
 type Cluster struct {
@@ -191,7 +194,7 @@ func (c *Cluster) run() {
 	if err := c.setupServices(); err != nil {
 		c.logger.Errorf("fail to setup etcd services: %v", err)
 	}
-	c.status.Phase = api.DatabasePhaseCreating
+	c.status.Phase = api.DatabasePhaseRunning
 	if err := c.updateCRStatus(); err != nil {
 		fmt.Println("W: update initial CR status failed: %v", err)
 	}
@@ -380,6 +383,8 @@ func (c *Cluster) isSecureClient() bool {
 }
 
 func (c *Cluster) updateCRStatus() error {
+	/*cl, er := json.Marshal(c.cluster)
+	fmt.Println(string(cl), er)*/
 	if reflect.DeepEqual(c.cluster.Status, c.status) {
 		return nil
 	}

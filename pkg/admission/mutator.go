@@ -100,7 +100,6 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, etcd 
 	if etcd.Spec.Version == "" {
 		return nil, fmt.Errorf(`object 'Version' is missing in '%v'`, etcd.Spec)
 	}
-	fmt.Println(etcd.Spec.Replicas, "rrrrrrrrrrrrrrrrrrrrrrr")
 	if etcd.Spec.Replicas == nil {
 		etcd.Spec.Replicas = types.Int32P(1)
 	}

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/appscode/go/log"
+	mon_api "github.com/appscode/kube-mon/api"
 	"github.com/appscode/kutil"
 	core_util "github.com/appscode/kutil/core/v1"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
@@ -20,12 +21,15 @@ const (
 	// EtcdClientPort is the client port on client service and etcd nodes.
 	EtcdClientPort = 2379
 
-	etcdVolumeMountDir = "/data/db"
-	dataDir            = etcdVolumeMountDir + "/data"
-	peerTLSDir         = "/etc/etcdtls/member/peer-tls"
-	peerTLSVolume      = "member-peer-tls"
-	serverTLSDir       = "/etc/etcdtls/member/server-tls"
-	serverTLSVolume    = "member-server-tls"
+	etcdVolumeMountDir    = "/data/db"
+	dataDir               = etcdVolumeMountDir + "/data"
+	peerTLSDir            = "/etc/etcdtls/member/peer-tls"
+	peerTLSVolume         = "member-peer-tls"
+	serverTLSDir          = "/etc/etcdtls/member/server-tls"
+	serverTLSVolume       = "member-server-tls"
+	operatorEtcdTLSDir    = "/etc/etcdtls/operator/etcd-tls"
+	operatorEtcdTLSVolume = "etcd-client-tls"
+	ExporterSecretPath    = "/var/run/secrets/kubedb.com/"
 
 	defaultDNSTimeout = int64(0)
 )
@@ -57,22 +61,11 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 		commands = fmt.Sprintf("%s --initial-cluster-token=%s", commands, token)
 	}
 
-	/*DNSTimeout := defaultDNSTimeout
-
-	_, err := createPodPvc(c.config.KubeCli, m, c.cluster)
-	if err != nil {
-		return nil, kutil.VerbUnchanged, err
-	}*/
 	return core_util.CreateOrPatchPod(c.config.KubeCli, podMeta, func(in *core.Pod) *core.Pod {
 		in.ObjectMeta = core_util.EnsureOwnerReference(in.ObjectMeta, ref)
 		in.Labels = core_util.UpsertMap(in.Labels, c.cluster.StatefulSetLabels())
-		/*in.Labels = core_util.UpsertMap(in.Labels, map[string]string{
-			"app":          "etcd",
-			"etcd_node":    m.Name,
-			"etcd_cluster": c.cluster.Name,
-		})*/
 		in.Annotations = core_util.UpsertMap(in.Annotations, map[string]string{
-			//"etcd.version": c.cluster.Spec.Version
+			//	"etcd.version": c.cluster.Spec.Version,
 		})
 
 		livenessProbe := newEtcdProbe(false)
@@ -81,7 +74,7 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 		readinessProbe.TimeoutSeconds = 5
 		readinessProbe.PeriodSeconds = 5
 		readinessProbe.FailureThreshold = 3
-		in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, core.Container{
+		container := core.Container{
 			Name:            api.ResourceSingularEtcd,
 			Image:           c.config.Docker.GetImageWithTag(c.cluster),
 			ImagePullPolicy: core.PullAlways,
@@ -101,16 +94,44 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 				},
 			},
 			Resources: c.cluster.Spec.Resources,
-		})
-		/*if c.cluster.GetMonitoringVendor() == mon_api.VendorPrometheus {
+		}
+		volumes := []core.Volume{}
+		if m.SecurePeer {
+			container.VolumeMounts = append(container.VolumeMounts, core.VolumeMount{
+				MountPath: peerTLSDir,
+				Name:      peerTLSVolume,
+			})
+			volumes = append(volumes, core.Volume{Name: peerTLSVolume, VolumeSource: core.VolumeSource{
+				Secret: &core.SecretVolumeSource{SecretName: c.cluster.Spec.TLS.Member.PeerSecret},
+			}})
+		}
+		if m.SecureClient {
+			container.VolumeMounts = append(container.VolumeMounts, core.VolumeMount{
+				MountPath: serverTLSDir,
+				Name:      serverTLSVolume,
+			}, core.VolumeMount{
+				MountPath: operatorEtcdTLSDir,
+				Name:      operatorEtcdTLSVolume,
+			})
+			volumes = append(volumes, core.Volume{Name: serverTLSVolume, VolumeSource: core.VolumeSource{
+				Secret: &core.SecretVolumeSource{SecretName: c.cluster.Spec.TLS.Member.ServerSecret},
+			}}, core.Volume{Name: operatorEtcdTLSVolume, VolumeSource: core.VolumeSource{
+				Secret: &core.SecretVolumeSource{SecretName: c.cluster.Spec.TLS.OperatorSecret},
+			}})
+		}
+
+		in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, container)
+		in.Spec.Volumes = core_util.UpsertVolume(in.Spec.Volumes, volumes...)
+
+		if c.cluster.GetMonitoringVendor() == mon_api.VendorPrometheus {
 			in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, core.Container{
 				Name: "exporter",
 				Args: append([]string{
 					"export",
 					fmt.Sprintf("--address=:%d", c.cluster.Spec.Monitor.Prometheus.Port),
-					fmt.Sprintf("--enable-analytics=%v", c.EnableAnalytics),
-				}, c.LoggerOptions.ToFlags()...),
-				Image: c.docker.GetOperatorImageWithTag(etcd),
+					fmt.Sprintf("--enable-analytics=%v", c.config.EnableAnalytics),
+				}, c.config.LoggerOptions.ToFlags()...),
+				Image: c.config.Docker.GetOperatorImageWithTag(c.cluster),
 				Ports: []core.ContainerPort{
 					{
 						Name:          api.PrometheusExporterPortName,
@@ -126,18 +147,18 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 					},
 				},
 			})
-			in.Spec.Template.Spec.Volumes = core_util.UpsertVolume(
-				in.Spec.Template.Spec.Volumes,
+			in.Spec.Volumes = core_util.UpsertVolume(
+				in.Spec.Volumes,
 				core.Volume{
 					Name: "db-secret",
 					VolumeSource: core.VolumeSource{
 						Secret: &core.SecretVolumeSource{
-							SecretName: etcd.Spec.DatabaseSecret.SecretName,
+							SecretName: c.cluster.Spec.DatabaseSecret.SecretName,
 						},
 					},
 				},
 			)
-		}*/
+		}
 
 		in.Spec.RestartPolicy = core.RestartPolicyNever
 		in.Spec.Hostname = m.Name

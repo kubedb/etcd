@@ -1,8 +1,8 @@
 apiVersion: kubedb.com/v1alpha1
 kind: Etcd
 metadata:
-  name: etcdb
-  namespace: demo
+  name: etcdbx
+  namespace: test
 spec:
   replicas: 1
   version: "3.2.13"

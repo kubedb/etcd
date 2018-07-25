@@ -187,7 +187,6 @@ func (c *Cluster) removePVC(pvcName string) error {
 	return nil
 }
 
-
 func needUpgrade(pods []*v1.Pod, cs api.EtcdSpec) bool {
 	return len(pods) == int(*cs.Replicas) && pickOneOldMember(pods, string(cs.Version)) != nil
 }

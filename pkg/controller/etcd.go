@@ -18,6 +18,9 @@ import (
 	kwatch "k8s.io/apimachinery/pkg/watch"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
+	core_util "github.com/appscode/kutil/core/v1"
+	"github.com/appscode/go/types"
+	"github.com/appscode/go/types"
 )
 
 func (c *Controller) syncEtcd(etcd *api.Etcd) error {
@@ -72,92 +75,13 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		return err
 	}
 
-	/*if etcd.Status.CreationTime == nil {
-		mg, _, err := util.PatchEtcd(c.ExtClient, etcd, func(in *api.Etcd) *api.Etcd {
-			t := metav1.Now()
-			in.Status.CreationTime = &t
-			in.Status.Phase = api.DatabasePhaseCreating
-			return in
-		})
-		if err != nil {
-			if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
-				c.recorder.Eventf(
-					ref,
-					core.EventTypeWarning,
-					eventer.EventReasonFailedToUpdate,
-					err.Error(),
-				)
-			}
-			return err
-		}
-		etcd.Status = mg.Status
-	}
-	*/
-	// create Governing Service
-	/*governingService, err := c.createPeerService(etcd)
-	if err != nil {
-		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
-			c.recorder.Eventf(
-				ref,
-				core.EventTypeWarning,
-				eventer.EventReasonFailedToCreate,
-				`Failed to create Service: "%v". Reason: %v`,
-				governingService,
-				err,
-			)
-		}
-		return err
-	}
-	fmt.Println(governingService, "-----------")
-	c.GoverningService = etcd.Name
-	fmt.Println(c.GoverningService, ">>>>>>>>>>>>>>>>>>>")
-
-	// ensure database Service
-	_, err = c.ensureService(etcd)
-	if err != nil {
-		return err
-	}
-	*/
 	switch event.Type {
 	case kwatch.Added:
-		fmt.Println("into addede...............")
 		if _, ok := c.clusters[etcd.Name]; ok {
 			return fmt.Errorf("unsafe state. cluster (%s) was created before but we received event (%s)", etcd.Name, event.Type)
 		}
-		//ctx, cancel := context.WithCancel(context.Background())
-		//c.ctxCancels[etcd.Name] = cancel
-		//c.New(etcd)
 		cluster := cluster.New(c.makeClusterConfig(), etcd)
 		c.clusters[etcd.Name] = cluster
-
-		/*clustersCreated.Inc()
-		clustersTotal.Inc()*/
-	case kwatch.Modified:
-		if _, ok := c.clusters[etcd.Name]; !ok {
-			return fmt.Errorf("unsafe state. cluster (%s) was never created but we received event (%s)", etcd.Name, event.Type)
-		}
-		c.clusters[etcd.Name].Update(etcd)
-		//clustersModified.Inc()
-
-	case kwatch.Deleted:
-		if _, ok := c.clusters[etcd.Name]; !ok {
-			return fmt.Errorf("unsafe state. cluster (%s) was never created but we received event (%s)", etcd.Name, event.Type)
-		}
-		c.clusters[etcd.Name].Delete()
-		delete(c.clusters, etcd.Name)
-		/*clustersDeleted.Inc()
-		clustersTotal.Dec()*/
-
-	}
-	return nil
-
-	// ensure database StatefulSet
-	vt2, err := c.ensureEtcdNode(etcd)
-	if err != nil {
-		return err
-	}
-
-	if vt2 == kutil.VerbCreated {
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
 			c.recorder.Event(
 				ref,
@@ -166,7 +90,11 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 				"Successfully created Etcd",
 			)
 		}
-	} else if vt2 == kutil.VerbPatched {
+	case kwatch.Modified:
+		if _, ok := c.clusters[etcd.Name]; !ok {
+			return fmt.Errorf("unsafe state. cluster (%s) was never created but we received event (%s)", etcd.Name, event.Type)
+		}
+		c.clusters[etcd.Name].Update(etcd)
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
 			c.recorder.Event(
 				ref,
@@ -175,8 +103,27 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 				"Successfully patched Etcd",
 			)
 		}
+
+	case kwatch.Deleted:
+		if _, ok := c.clusters[etcd.Name]; !ok {
+			return fmt.Errorf("unsafe state. cluster (%s) was never created but we received event (%s)", etcd.Name, event.Type)
+		}
+		c.clusters[etcd.Name].Delete()
+		delete(c.clusters, etcd.Name)
 	}
 
+	if err := core_util.WaitUntilPodRunningBySelector(
+		c.Client,
+		etcd.Namespace,
+		&metav1.LabelSelector{
+			MatchLabels: etcd.StatefulSetLabels(),
+		},
+		int(types.Int32(etcd.Spec.Replicas)),
+	); err != nil {
+		return err
+	}
+
+	//return nil
 	if _, err := meta_util.GetString(etcd.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound &&
 		etcd.Spec.Init != nil && etcd.Spec.Init.SnapshotSource != nil {
 
@@ -203,6 +150,7 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		in.Status.Phase = api.DatabasePhaseRunning
 		return in
 	})
+
 	if err != nil {
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
 			c.recorder.Eventf(
@@ -238,10 +186,12 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 
 func (c *Controller) makeClusterConfig() cluster.Config {
 	return cluster.Config{
+		LoggerOptions: c.LoggerOptions,
 		//ServiceAccount: c.Config.ServiceAccount,
-		KubeCli:   c.Controller.Client,
-		EtcdCRCli: c.Controller.ExtClient,
-		Docker:    c.docker,
+		KubeCli:         c.Controller.Client,
+		EtcdCRCli:       c.Controller.ExtClient,
+		Docker:          c.docker,
+		EnableAnalytics: c.EnableAnalytics,
 	}
 }
 
