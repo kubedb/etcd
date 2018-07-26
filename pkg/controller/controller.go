@@ -47,7 +47,7 @@ type Controller struct {
 	// labelselector for event-handler of Snapshot, Dormant and Job
 	selector labels.Selector
 
-	clusters map[string]*cluster.Cluster
+	clusters map[string]*Cluster
 	// Etcd
 	etcdQueue    *queue.Worker
 	etcdInformer cache.SharedIndexInformer
@@ -80,7 +80,7 @@ func New(
 		selector: labels.SelectorFromSet(map[string]string{
 			api.LabelDatabaseKind: api.ResourceKindEtcd,
 		}),
-		clusters: make(map[string]*cluster.Cluster),
+		clusters: make(map[string]*Cluster),
 	}
 }
 

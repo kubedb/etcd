@@ -1,4 +1,4 @@
-package cluster
+package controller
 
 import (
 	"crypto/tls"
@@ -37,19 +37,8 @@ type clusterEvent struct {
 	cluster *api.Etcd
 }
 
-type Config struct {
-	ServiceAccount string
-
-	LoggerOptions   golog.Options
-	Docker          docker.Docker
-	KubeCli         kubernetes.Interface
-	EtcdCRCli       cs.KubedbV1alpha1Interface
-	EnableAnalytics bool
-}
-
 type Cluster struct {
 	logger *logrus.Entry
-	config Config
 
 	cluster *api.Etcd
 
@@ -70,40 +59,38 @@ type Cluster struct {
 	eventsCli corev1.EventInterface
 }
 
-func New(config Config, etcd *api.Etcd) *Cluster {
+func (c Controller) NewCluster(etcd *api.Etcd){
 	lg := logrus.WithField("pkg", "cluster").WithField("cluster-name", etcd.Name)
 
-	c := &Cluster{
+	cluster := &Cluster{
 		logger:    lg,
-		config:    config,
 		cluster:   etcd,
 		eventCh:   make(chan *clusterEvent, 100),
 		stopCh:    make(chan struct{}),
 		status:    *(etcd.Status.DeepCopy()),
-		eventsCli: config.KubeCli.Core().Events(etcd.Namespace),
+		eventsCli: c.Controller.Client.Core().Events(etcd.Namespace),
 	}
 
 	go func() {
-		if err := c.setup(); err != nil {
-			fmt.Println(err, "...........................")
-			if c.status.Phase != api.DatabasePhaseFailed {
-				c.status.Reason = err.Error()
-				c.status.Phase = api.DatabasePhaseFailed
-				if err := c.updateCRStatus(); err != nil {
-					c.logger.Errorf("failed to update cluster phase (%v): %v", api.DatabasePhaseFailed, err)
+		if err := c.setup(cluster); err != nil {
+			if cluster.status.Phase != api.DatabasePhaseFailed {
+				cluster.status.Reason = err.Error()
+				cluster.status.Phase = api.DatabasePhaseFailed
+				if err := c.updateCRStatus(cluster); err != nil {
+					cluster.logger.Errorf("failed to update cluster phase (%v): %v", api.DatabasePhaseFailed, err)
 				}
 			}
 			return
 		}
-		c.run()
+		c.run(cluster)
 	}()
 
-	return c
+	c.clusters[etcd.Name] = cluster
 }
 
-func (c *Cluster) setup() error {
+func (c *Controller) setup(cluster *Cluster) error {
 	var shouldCreateCluster bool
-	switch c.status.Phase {
+	switch cluster.status.Phase {
 	case "":
 		shouldCreateCluster = true
 	case api.DatabasePhaseCreating:
@@ -111,7 +98,7 @@ func (c *Cluster) setup() error {
 	case api.DatabasePhaseRunning:
 		shouldCreateCluster = false
 	default:
-		return fmt.Errorf("unexpected cluster phase: %s", c.status.Phase)
+		return fmt.Errorf("unexpected cluster phase: %s", cluster.status.Phase)
 	}
 
 	/*if c.isSecureClient() {
@@ -126,25 +113,24 @@ func (c *Cluster) setup() error {
 	}*/
 
 	if shouldCreateCluster {
-		return c.create()
+		return c.create(cluster)
 	}
 	return nil
 }
 
-func (c *Cluster) create() error {
-	c.status.Phase = api.DatabasePhaseCreating
+func (c *Controller) create(cl *Cluster) error {
+	cl.status.Phase = api.DatabasePhaseCreating
 
 	fmt.Println("creating..................")
-	if err := c.updateCRStatus(); err != nil {
+	if err := c.updateCRStatus(cl); err != nil {
 		return fmt.Errorf("cluster create: failed to update cluster phase (%v): %v", api.DatabasePhaseCreating, err)
 	}
 
-	return c.prepareSeedMember()
+	return c.prepareSeedMember(cl)
 }
 
-func (c *Cluster) prepareSeedMember() error {
-
-	err := c.bootstrap()
+func (c *Controller) prepareSeedMember(cl *Cluster) error {
+	err := c.bootstrap(cl)
 	if err != nil {
 		return err
 	}
@@ -152,8 +138,8 @@ func (c *Cluster) prepareSeedMember() error {
 	return nil
 }
 
-func (c *Cluster) bootstrap() error {
-	return c.startSeedMember()
+func (c *Controller) bootstrap(cl *Cluster) error {
+	return cl.startSeedMember(c.Controller.Client)
 }
 
 func (c *Cluster) Update(cl *api.Etcd) {
@@ -189,13 +175,13 @@ func (c *Cluster) startSeedMember() error {
 	return nil
 }
 
-func (c *Cluster) run() {
-	if err := c.setupServices(); err != nil {
-		c.logger.Errorf("fail to setup etcd services: %v", err)
+func (c *Controller) run(cluster *Cluster) {
+	if err := c.setupServices(cluster); err != nil {
+		cluster.logger.Errorf("fail to setup etcd services: %v", err)
 	}
-	fmt.Println(c.status.Phase, "#######################################3")
-	c.status.Phase = api.DatabasePhaseCreating
-	if err := c.updateCRStatus(); err != nil {
+	fmt.Println(cluster.status.Phase, "#######################################3")
+	cluster.status.Phase = api.DatabasePhaseCreating
+	if err := c.updateCRStatus(cluster); err != nil {
 		fmt.Println("W: update initial CR status failed: %v", err)
 	}
 	fmt.Println("start running...")
@@ -203,14 +189,14 @@ func (c *Cluster) run() {
 	var rerr error
 	for {
 		select {
-		case <-c.stopCh:
+		case <-cluster.stopCh:
 			return
-		case event := <-c.eventCh:
+		case event := <-cluster.eventCh:
 			switch event.typ {
 			case eventModifyCluster:
-				err := c.handleUpdateEvent(event)
+				err := cluster.handleUpdateEvent(event)
 				if err != nil {
-					c.status.Reason = err.Error()
+					cluster.status.Reason = err.Error()
 					//c.reportFailedStatus()
 					return
 				}
@@ -229,48 +215,48 @@ func (c *Cluster) run() {
 				//	c.status.Control()
 			}*/
 
-			running, pending, err := c.pollPods()
+			running, pending, err := c.pollPods(cluster)
 			if err != nil {
-				c.logger.Errorf("fail to poll pods: %v", err)
+				cluster.logger.Errorf("fail to poll pods: %v", err)
 				//	reconcileFailed.WithLabelValues("failed to poll pods").Inc()
 				continue
 			}
 
 			if len(pending) > 0 {
 				// Pod startup might take long, e.g. pulling image. It would deterministically become running or succeeded/failed later.
-				c.logger.Infof("skip reconciliation: running (%v), pending (%v)", util.GetPodNames(running), util.GetPodNames(pending))
+				cluster.logger.Infof("skip reconciliation: running (%v), pending (%v)", util.GetPodNames(running), util.GetPodNames(pending))
 				//	reconcileFailed.WithLabelValues("not all pods are running").Inc()
 				continue
 			}
 			if len(running) == 0 {
 				// TODO: how to handle this case?
-				c.logger.Warningf("all etcd pods are dead.")
+				cluster.logger.Warningf("all etcd pods are dead.")
 				break
 			}
 
 			// On controller restore, we could have "members == nil"
-			if rerr != nil || c.members == nil {
-				rerr = c.updateMembers(podsToMemberSet(running, c.isSecureClient()))
+			if rerr != nil || cluster.members == nil {
+				rerr = cluster.updateMembers(podsToMemberSet(running, cluster.isSecureClient()))
 				if rerr != nil {
-					c.logger.Errorf("failed to update members: %v", rerr)
+					cluster.logger.Errorf("failed to update members: %v", rerr)
 					break
 				}
 			}
-			rerr = c.reconcile(running)
+			rerr = cluster.reconcile(running)
 			if rerr != nil {
-				c.logger.Errorf("failed to reconcile: %v", rerr)
+				cluster.logger.Errorf("failed to reconcile: %v", rerr)
 				break
 			}
 			//c.updateMemberStatus(running)
-			if err := c.updateCRStatus(); err != nil {
-				c.logger.Warningf("periodic update CR status failed: %v", err)
+			if err := cluster.updateCRStatus(); err != nil {
+				cluster.logger.Warningf("periodic update CR status failed: %v", err)
 			}
 
 			//reconcileHistogram.WithLabelValues(c.name()).Observe(time.Since(start).Seconds())
 		}
 
 		if rerr != nil {
-			c.logger.Infoln(rerr, "......................")
+			cluster.logger.Infoln(rerr, "......................")
 			//reconcileFailed.WithLabelValues(rerr.Error()).Inc()
 		}
 
@@ -300,8 +286,8 @@ func (c *Cluster) handleUpdateEvent(event *clusterEvent) error {
 	return nil
 }
 
-func (c *Cluster) pollPods() (running, pending []*v1.Pod, err error) {
-	podList, err := c.config.KubeCli.Core().Pods(c.cluster.Namespace).List(metav1.ListOptions{
+func (c *Controller) pollPods() (running, pending []*v1.Pod, err error) {
+	podList, err := c.Controller.Client.Core().Pods(c.cluster.Namespace).List(metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(c.cluster.StatefulSetLabels()).String(),
 	})
 	if err != nil {
@@ -347,15 +333,12 @@ func (c *Cluster) removePod(name string) error {
 	return nil
 }
 
-func (c *Cluster) setupServices() error {
-	err := c.CreateClientService()
-	fmt.Println(err, "..........")
+func (c *Controller) setupServices(cluster *Cluster) error {
+	err := c.CreateClientService(cluster)
 	if err != nil {
 		return err
 	}
-	fmt.Println("creating peer service..............")
-
-	return c.CreatePeerService()
+	return c.CreatePeerService(cluster)
 }
 
 func (c *Cluster) send(ev *clusterEvent) {
@@ -383,15 +366,15 @@ func (c *Cluster) isSecureClient() bool {
 	return len(c.cluster.Spec.TLS.OperatorSecret) != 0
 }
 
-func (c *Cluster) updateCRStatus() error {
+func (c *Controller) updateCRStatus(cl *Cluster) error {
 	/*cl, er := json.Marshal(c.cluster)
 	fmt.Println(string(cl), er)*/
-	if reflect.DeepEqual(c.cluster.Status, c.status) {
+	if reflect.DeepEqual(cl.cluster.Status, cl.status) {
 		return nil
 	}
-	_, _, err := dbutil.PatchEtcd(c.config.EtcdCRCli, c.cluster, func(in *api.Etcd) *api.Etcd {
+	_, _, err := dbutil.PatchEtcd(c.Controller.ExtClient, cl.cluster, func(in *api.Etcd) *api.Etcd {
 
-		in.Status.Phase = c.status.Phase
+		in.Status.Phase = cl.status.Phase
 		return in
 	})
 	return err
