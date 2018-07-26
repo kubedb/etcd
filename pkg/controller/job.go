@@ -2,15 +2,17 @@ package controller
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/appscode/kutil/tools/analytics"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/pkg/storage"
 	"github.com/kubedb/etcd/pkg/cluster"
+	etcdutil "github.com/kubedb/etcd/pkg/util"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"path/filepath"
 )
 
 const (
@@ -19,7 +21,7 @@ const (
 	snapshotProcessBackup  = "backup"
 )
 
-func (c *Controller) createRestoreJob(etcd *api.Etcd, snapshot *api.Snapshot) (*batch.Job, error) {
+func (c *Controller) createRestoreJob(etcd *api.Etcd, snapshot *api.Snapshot, m *etcdutil.Member, ms etcdutil.MemberSet) (*batch.Job, error) {
 	databaseName := etcd.Name
 	jobName := fmt.Sprintf("%s-%s", api.DatabaseNamePrefix, snapshot.OffshootName())
 	jobLabel := map[string]string{
@@ -43,6 +45,13 @@ func (c *Controller) createRestoreJob(etcd *api.Etcd, snapshot *api.Snapshot) (*
 
 	// Folder name inside Cloud bucket where backup will be uploaded
 	folderName, _ := snapshot.Location()
+	fmt.Println(ms.PeerURLPairs(), "................")
+	fmt.Println(fmt.Sprintf("ETCDCTL_API=3 etcdctl snapshot restore %[1]s"+
+		" --name %[2]s"+
+		" --initial-cluster %[3]s"+
+		" --initial-cluster-token %[5]s"+
+		" --initial-advertise-peer-urls %[4]s"+
+		" --data-dir %[6]s 2>/dev/termination-log", filepath.Join(snapshotDumpDir, snapshot.Name), m.Name, strings.Join(ms.PeerURLPairs(), ","), m.PeerURL(), etcd.Name, "/data/db/data"))
 
 	job := &batch.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -72,10 +81,9 @@ func (c *Controller) createRestoreJob(etcd *api.Etcd, snapshot *api.Snapshot) (*
 								"/bin/sh", "-ec",
 								fmt.Sprintf("ETCDCTL_API=3 etcdctl snapshot restore %[1]s"+
 									" --name %[2]s"+
-									" --initial-cluster %[2]s=%[3]s"+
-									" --initial-cluster-token %[4]s"+
-									" --initial-advertise-peer-urls %[3]s"+
-									" --data-dir %[5]s 2>/dev/termination-log", filepath.Join(snapshotDumpDir, snapshot.Name), m.Name, m.PeerURL(), token, dataDir),
+									" --initial-cluster %[3]s"+
+									" --initial-cluster-token %[5]s"+
+									" --initial-advertise-peer-urls %[4]s 2>/dev/termination-log", filepath.Join(snapshotDumpDir, snapshot.Name), m.Name, strings.Join(ms.PeerURLPairs(), ","), m.PeerURL(), etcd.Name),
 							},
 							Resources: snapshot.Spec.Resources,
 							VolumeMounts: []core.VolumeMount{
@@ -104,17 +112,6 @@ func (c *Controller) createRestoreJob(etcd *api.Etcd, snapshot *api.Snapshot) (*
 								{
 									Name:  analytics.Key,
 									Value: c.AnalyticsClientID,
-								},
-								{
-									Name: "DB_PASSWORD",
-									ValueFrom: &core.EnvVarSource{
-										SecretKeyRef: &core.SecretKeySelector{
-											LocalObjectReference: core.LocalObjectReference{
-												Name: etcd.Spec.DatabaseSecret.SecretName,
-											},
-											Key: KeyEtcdPassword,
-										},
-									},
 								},
 							},
 							Resources: snapshot.Spec.Resources,

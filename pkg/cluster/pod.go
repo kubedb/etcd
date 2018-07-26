@@ -8,6 +8,7 @@ import (
 	mon_api "github.com/appscode/kube-mon/api"
 	"github.com/appscode/kutil"
 	core_util "github.com/appscode/kutil/core/v1"
+	meta_util "github.com/appscode/kutil/meta"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/etcd/pkg/util"
 	core "k8s.io/api/core/v1"
@@ -31,7 +32,9 @@ const (
 	operatorEtcdTLSVolume = "etcd-client-tls"
 	ExporterSecretPath    = "/var/run/secrets/kubedb.com/"
 
-	defaultDNSTimeout = int64(0)
+	snapshotDumpDir        = "/var/data"
+	snapshotProcessRestore = "restore"
+	defaultDNSTimeout      = int64(0)
 )
 
 func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string) (*core.Pod, kutil.VerbType, error) {
@@ -45,6 +48,22 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, c.cluster)
 	if rerr != nil {
 		return nil, kutil.VerbUnchanged, rerr
+	}
+
+	initContainers := []core.Container{
+		{
+			Image: "busybox:1.28.0-glibc",
+			Name:  "check-dns",
+			Command: []string{"/bin/sh", "-c", fmt.Sprintf(`
+					while ( ! nslookup %s )
+					do
+						sleep 1
+					done`, m.Addr())},
+		},
+	}
+	if _, err := meta_util.GetString(c.cluster.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound &&
+		c.cluster.Spec.Init != nil && c.cluster.Spec.Init.SnapshotSource != nil {
+
 	}
 
 	commands := fmt.Sprintf("/usr/local/bin/etcd --data-dir=%s --name=%s --initial-advertise-peer-urls=%s "+
@@ -169,15 +188,9 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 		in = upsertEnv(in, c.cluster)
 		in = upsertDataVolume(in, c.cluster)
 
-		in.Spec.InitContainers = core_util.UpsertContainer(in.Spec.InitContainers, core.Container{
-			Image: "busybox:1.28.0-glibc",
-			Name:  "check-dns",
-			Command: []string{"/bin/sh", "-c", fmt.Sprintf(`
-					while ( ! nslookup %s )
-					do
-						sleep 1
-					done`, m.Addr())},
-		})
+		for _, ic := range initContainers {
+			in.Spec.InitContainers = core_util.UpsertContainer(in.Spec.InitContainers, ic)
+		}
 
 		return in
 	})
@@ -301,3 +314,43 @@ func createPodPvc(client kubernetes.Interface, m *util.Member, etcd *api.Etcd) (
 	}
 	return nil, nil
 }
+
+/*func (c *Cluster) getRestoreContainer() []core.Container  {
+	snapshot, err := c.config.EtcdCRCli.Snapshots(c.cluster.Name).Get(snapshotSource.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	containers := []core.Container{
+		{
+			Name:  snapshotProcessRestore,
+			Image: c.config.Docker.GetToolsImageWithTag(c.cluster),
+			Args: []string{
+				snapshotProcessRestore,
+				fmt.Sprintf(`--host=%s`, c.cluster.Name),
+				fmt.Sprintf(`--data-dir=%s`, snapshotDumpDir),
+				fmt.Sprintf(`--bucket=%s`, bucket),
+				fmt.Sprintf(`--folder=%s`, folderName),
+				fmt.Sprintf(`--snapshot=%s`, snapshot.Name),
+				fmt.Sprintf(`--enable-analytics=%v`, c.EnableAnalytics),
+			},
+			Env: []core.EnvVar{
+				{
+					Name:  analytics.Key,
+					Value: c.AnalyticsClientID,
+				},
+			},
+			Resources: snapshot.Spec.Resources,
+			VolumeMounts: []core.VolumeMount{
+				{
+					Name:      persistentVolume.Name,
+					MountPath: snapshotDumpDir,
+				},
+				{
+					Name:      "osmconfig",
+					MountPath: storage.SecretMountPath,
+					ReadOnly:  true,
+				},
+			},
+		},
+	}
+}*/

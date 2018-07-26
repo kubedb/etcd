@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"github.com/appscode/kutil"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -137,6 +138,7 @@ func WaitUntilPodRunningBySelector(kubeClient kubernetes.Interface, namespace st
 		}
 
 		for _, pod := range podList.Items {
+			fmt.Println(pod.Status.Phase, "..............LLLLLLLLLLLLLLLL")
 			runningAndReady, _ := PodRunningAndReady(pod)
 			if !runningAndReady {
 				return false, nil

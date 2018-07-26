@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/appscode/go/log"
+	"github.com/appscode/go/types"
 	"github.com/appscode/kutil"
+	core_util "github.com/appscode/kutil/core/v1"
 	meta_util "github.com/appscode/kutil/meta"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
@@ -12,15 +14,13 @@ import (
 	"github.com/kubedb/apimachinery/pkg/storage"
 	validator "github.com/kubedb/etcd/pkg/admission"
 	"github.com/kubedb/etcd/pkg/cluster"
+	etcdutil "github.com/kubedb/etcd/pkg/util"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kwatch "k8s.io/apimachinery/pkg/watch"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
-	core_util "github.com/appscode/kutil/core/v1"
-	"github.com/appscode/go/types"
-	"github.com/appscode/go/types"
 )
 
 func (c *Controller) syncEtcd(etcd *api.Etcd) error {
@@ -105,6 +105,7 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		}
 
 	case kwatch.Deleted:
+		fmt.Println("deleting.........................")
 		if _, ok := c.clusters[etcd.Name]; !ok {
 			return fmt.Errorf("unsafe state. cluster (%s) was never created but we received event (%s)", etcd.Name, event.Type)
 		}
@@ -112,6 +113,7 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		delete(c.clusters, etcd.Name)
 	}
 
+	fmt.Println("waiting.....................................")
 	if err := core_util.WaitUntilPodRunningBySelector(
 		c.Client,
 		etcd.Namespace,
@@ -120,36 +122,41 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		},
 		int(types.Int32(etcd.Spec.Replicas)),
 	); err != nil {
+		fmt.Println(err, "....................................")
 		return err
 	}
 
 	//return nil
 	if _, err := meta_util.GetString(etcd.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound &&
 		etcd.Spec.Init != nil && etcd.Spec.Init.SnapshotSource != nil {
+		fmt.Println("initializeing>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 
-		snapshotSource := etcd.Spec.Init.SnapshotSource
+		//snapshotSource := etcd.Spec.Init.SnapshotSource
 
 		if etcd.Status.Phase == api.DatabasePhaseInitializing {
 			return nil
 		}
-		jobName := fmt.Sprintf("%s-%s", api.DatabaseNamePrefix, snapshotSource.Name)
+		/*jobName := fmt.Sprintf("%s-%s", api.DatabaseNamePrefix, snapshotSource.Name)
 		if _, err := c.Client.BatchV1().Jobs(snapshotSource.Namespace).Get(jobName, metav1.GetOptions{}); err != nil {
 			if kerr.IsAlreadyExists(err) {
 				return nil
 			} else if !kerr.IsNotFound(err) {
 				return err
 			}
-		}
+		}*/
 		if err := c.initialize(etcd); err != nil {
 			return fmt.Errorf("failed to complete initialization. Reason: %v", err)
 		}
 		return nil
 	}
 
+	fmt.Println("running...........><>>>>>>>>>>><>>>>>>>>>>>>>>>")
+
 	ms, _, err := util.PatchEtcd(c.ExtClient, etcd, func(in *api.Etcd) *api.Etcd {
 		in.Status.Phase = api.DatabasePhaseRunning
 		return in
 	})
+	fmt.Println(err, ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,")
 
 	if err != nil {
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
@@ -195,27 +202,6 @@ func (c *Controller) makeClusterConfig() cluster.Config {
 	}
 }
 
-func (c *Controller) ensureEtcdNode(etcd *api.Etcd) (kutil.VerbType, error) {
-	var err error
-
-	if err := c.ensureDatabaseSecret(etcd); err != nil {
-		return kutil.VerbUnchanged, err
-	}
-	if c.EnableRBAC {
-		// Ensure ClusterRoles for database statefulsets
-		if err := c.ensureRBACStuff(etcd); err != nil {
-			return kutil.VerbUnchanged, err
-		}
-	}
-
-	vt, err := c.ensureCombinedNode(etcd)
-	if err != nil {
-		return kutil.VerbUnchanged, err
-	}
-
-	return vt, nil
-}
-
 func (c *Controller) ensureBackupScheduler(etcd *api.Etcd) {
 	// Setup Schedule backup
 	if etcd.Spec.BackupSchedule != nil {
@@ -253,6 +239,7 @@ func (c *Controller) initialize(etcd *api.Etcd) error {
 		}
 		return err
 	}
+	return nil
 	etcd.Status = mg.Status
 
 	snapshotSource := etcd.Spec.Init.SnapshotSource
@@ -285,13 +272,38 @@ func (c *Controller) initialize(etcd *api.Etcd) error {
 		return err
 	}
 
-	job, err := c.createRestoreJob(etcd, snapshot)
+	etcdMembers, err := etcdutil.ListMembers([]string{
+		fmt.Sprintf("http://%s.%s:2379", cluster.ClientServiceName(etcd.Name), etcd.Namespace),
+	}, nil)
+
 	if err != nil {
 		return err
 	}
 
-	if err := c.SetJobOwnerReference(snapshot, job); err != nil {
-		return err
+	members := etcdutil.MemberSet{}
+	for _, m := range etcdMembers.Members {
+		name := m.Name
+		members[name] = &etcdutil.Member{
+			Name:      name,
+			Namespace: etcd.Namespace,
+			ID:        m.ID,
+			//SecurePeer:   c.isSecurePeer(),
+			//SecureClient: c.isSecureClient(),
+		}
+	}
+
+	for _, em := range etcdMembers.Members {
+		e := &etcdutil.Member{
+			Name:      em.Name,
+			Namespace: etcd.Namespace,
+		}
+		job, err := c.createRestoreJob(etcd, snapshot, e, members)
+		if err != nil {
+			return err
+		}
+		if err := c.SetJobOwnerReference(snapshot, job); err != nil {
+			return err
+		}
 	}
 
 	return nil

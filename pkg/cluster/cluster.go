@@ -82,7 +82,6 @@ func New(config Config, etcd *api.Etcd) *Cluster {
 		status:    *(etcd.Status.DeepCopy()),
 		eventsCli: config.KubeCli.Core().Events(etcd.Namespace),
 	}
-	fmt.Println("......................................")
 
 	go func() {
 		if err := c.setup(); err != nil {
@@ -194,7 +193,8 @@ func (c *Cluster) run() {
 	if err := c.setupServices(); err != nil {
 		c.logger.Errorf("fail to setup etcd services: %v", err)
 	}
-	c.status.Phase = api.DatabasePhaseRunning
+	fmt.Println(c.status.Phase, "#######################################3")
+	c.status.Phase = api.DatabasePhaseCreating
 	if err := c.updateCRStatus(); err != nil {
 		fmt.Println("W: update initial CR status failed: %v", err)
 	}
@@ -270,6 +270,7 @@ func (c *Cluster) run() {
 		}
 
 		if rerr != nil {
+			c.logger.Infoln(rerr, "......................")
 			//reconcileFailed.WithLabelValues(rerr.Error()).Inc()
 		}
 

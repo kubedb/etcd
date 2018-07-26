@@ -1,12 +1,15 @@
 package controller
 
 import (
+	"fmt"
+
 	"github.com/appscode/go/log"
 	core_util "github.com/appscode/kutil/core/v1"
 	meta_util "github.com/appscode/kutil/meta"
 	"github.com/appscode/kutil/tools/queue"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
+	kwatch "k8s.io/apimachinery/pkg/watch"
 )
 
 func (c *Controller) initWatcher() {
@@ -49,6 +52,12 @@ func (c *Controller) runEtcd(key string) error {
 		// is dependent on the actual instance, to detect that a Etcd was recreated with the same name
 		etcd := obj.(*api.Etcd).DeepCopy()
 		if etcd.DeletionTimestamp != nil {
+			ev := &Event{
+				Type:   kwatch.Deleted,
+				Object: etcd,
+			}
+			err = c.handleEtcdEvent(ev)
+			fmt.Println(err, "...............****************************")
 			if core_util.HasFinalizer(etcd.ObjectMeta, api.GenericKey) {
 				util.AssignTypeKind(etcd)
 				if err := c.pause(etcd); err != nil {

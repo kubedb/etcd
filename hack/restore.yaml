@@ -1,7 +1,7 @@
 apiVersion: kubedb.com/v1alpha1
 kind: Etcd
 metadata:
-  name: etcdb
+  name: etcdb-r
   namespace: demo
 spec:
   replicas: 1
@@ -13,3 +13,7 @@ spec:
     resources:
       requests:
         storage: 1Gi
+  init:
+    snapshotSource:
+      name: snapshot-x
+      namespace: demo
