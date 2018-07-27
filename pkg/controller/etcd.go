@@ -11,10 +11,7 @@ import (
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	"github.com/kubedb/apimachinery/pkg/eventer"
-	"github.com/kubedb/apimachinery/pkg/storage"
 	validator "github.com/kubedb/etcd/pkg/admission"
-	"github.com/kubedb/etcd/pkg/cluster"
-	etcdutil "github.com/kubedb/etcd/pkg/util"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +36,6 @@ func (c *Controller) syncEtcd(etcd *api.Etcd) error {
 
 func (c *Controller) handleEtcdEvent(event *Event) error {
 	etcd := event.Object
-	fmt.Println(event.Type, ">>>>>>>>>>>>>>>>>>>>>>>>>>>")
 	if etcd.Status.Phase == api.DatabasePhaseFailed {
 		if event.Type == kwatch.Deleted {
 			delete(c.clusters, etcd.Name)
@@ -80,8 +76,8 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		if _, ok := c.clusters[etcd.Name]; ok {
 			return fmt.Errorf("unsafe state. cluster (%s) was created before but we received event (%s)", etcd.Name, event.Type)
 		}
-		cluster := cluster.New(c.makeClusterConfig(), etcd)
-		c.clusters[etcd.Name] = cluster
+		c.NewCluster(etcd)
+		//c.clusters[etcd.Name] = cluster
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
 			c.recorder.Event(
 				ref,
@@ -105,7 +101,6 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		}
 
 	case kwatch.Deleted:
-		fmt.Println("deleting.........................")
 		if _, ok := c.clusters[etcd.Name]; !ok {
 			return fmt.Errorf("unsafe state. cluster (%s) was never created but we received event (%s)", etcd.Name, event.Type)
 		}
@@ -113,7 +108,6 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		delete(c.clusters, etcd.Name)
 	}
 
-	fmt.Println("waiting.....................................")
 	if err := core_util.WaitUntilPodRunningBySelector(
 		c.Client,
 		etcd.Namespace,
@@ -122,32 +116,17 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		},
 		int(types.Int32(etcd.Spec.Replicas)),
 	); err != nil {
-		fmt.Println(err, "....................................")
 		return err
 	}
 
 	//return nil
 	if _, err := meta_util.GetString(etcd.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound &&
 		etcd.Spec.Init != nil && etcd.Spec.Init.SnapshotSource != nil {
-		fmt.Println("initializeing>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-
 		//snapshotSource := etcd.Spec.Init.SnapshotSource
 
-		if etcd.Status.Phase == api.DatabasePhaseInitializing {
-			return nil
-		}
-		/*jobName := fmt.Sprintf("%s-%s", api.DatabaseNamePrefix, snapshotSource.Name)
-		if _, err := c.Client.BatchV1().Jobs(snapshotSource.Namespace).Get(jobName, metav1.GetOptions{}); err != nil {
-			if kerr.IsAlreadyExists(err) {
-				return nil
-			} else if !kerr.IsNotFound(err) {
-				return err
-			}
-		}*/
-		if err := c.initialize(etcd); err != nil {
-			return fmt.Errorf("failed to complete initialization. Reason: %v", err)
-		}
-		return nil
+		etcd.Annotations = core_util.UpsertMap(etcd.Annotations, map[string]string{
+			api.AnnotationInitialized: "",
+		})
 	}
 
 	fmt.Println("running...........><>>>>>>>>>>><>>>>>>>>>>>>>>>")
@@ -191,17 +170,6 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 	return nil
 }
 
-func (c *Controller) makeClusterConfig() cluster.Config {
-	return cluster.Config{
-		LoggerOptions: c.LoggerOptions,
-		//ServiceAccount: c.Config.ServiceAccount,
-		KubeCli:         c.Controller.Client,
-		EtcdCRCli:       c.Controller.ExtClient,
-		Docker:          c.docker,
-		EnableAnalytics: c.EnableAnalytics,
-	}
-}
-
 func (c *Controller) ensureBackupScheduler(etcd *api.Etcd) {
 	// Setup Schedule backup
 	if etcd.Spec.BackupSchedule != nil {
@@ -239,72 +207,7 @@ func (c *Controller) initialize(etcd *api.Etcd) error {
 		}
 		return err
 	}
-	return nil
 	etcd.Status = mg.Status
-
-	snapshotSource := etcd.Spec.Init.SnapshotSource
-	// Event for notification that kubernetes objects are creating
-	if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
-		c.recorder.Eventf(
-			ref,
-			core.EventTypeNormal,
-			eventer.EventReasonInitializing,
-			`Initializing from Snapshot: "%v"`,
-			snapshotSource.Name,
-		)
-	}
-
-	namespace := snapshotSource.Namespace
-	if namespace == "" {
-		namespace = etcd.Namespace
-	}
-	snapshot, err := c.ExtClient.Snapshots(namespace).Get(snapshotSource.Name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	secret, err := storage.NewOSMSecret(c.Client, snapshot)
-	if err != nil {
-		return err
-	}
-	secret, err = c.Client.CoreV1().Secrets(secret.Namespace).Create(secret)
-	if err != nil && !kerr.IsAlreadyExists(err) {
-		return err
-	}
-
-	etcdMembers, err := etcdutil.ListMembers([]string{
-		fmt.Sprintf("http://%s.%s:2379", cluster.ClientServiceName(etcd.Name), etcd.Namespace),
-	}, nil)
-
-	if err != nil {
-		return err
-	}
-
-	members := etcdutil.MemberSet{}
-	for _, m := range etcdMembers.Members {
-		name := m.Name
-		members[name] = &etcdutil.Member{
-			Name:      name,
-			Namespace: etcd.Namespace,
-			ID:        m.ID,
-			//SecurePeer:   c.isSecurePeer(),
-			//SecureClient: c.isSecureClient(),
-		}
-	}
-
-	for _, em := range etcdMembers.Members {
-		e := &etcdutil.Member{
-			Name:      em.Name,
-			Namespace: etcd.Namespace,
-		}
-		job, err := c.createRestoreJob(etcd, snapshot, e, members)
-		if err != nil {
-			return err
-		}
-		if err := c.SetJobOwnerReference(snapshot, job); err != nil {
-			return err
-		}
-	}
 
 	return nil
 }

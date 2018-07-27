@@ -12,15 +12,16 @@ import (
 	"github.com/kubedb/etcd/pkg/util"
 	"k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/kubernetes"
 )
 
 var ErrLostQuorum = errors.New("lost quorum")
 
-func (c *Cluster) reconcile(pods []*v1.Pod) error {
-	sp := c.cluster.Spec
-	running := podsToMemberSet(pods, c.isSecureClient())
-	if !running.IsEqual(c.members) || int32(c.members.Size()) != *sp.Replicas {
-		return c.reconcileMembers(running)
+func (c *Controller) reconcile(cl *Cluster, pods []*v1.Pod) error {
+	sp := cl.cluster.Spec
+	running := podsToMemberSet(pods, cl.isSecureClient())
+	if !running.IsEqual(cl.members) || int32(cl.members.Size()) != *sp.Replicas {
+		return c.reconcileMembers(cl, running)
 	}
 	//c.status.ClearCondition(api.ClusterConditionScaling)
 
@@ -38,60 +39,60 @@ func (c *Cluster) reconcile(pods []*v1.Pod) error {
 	return nil
 }
 
-func (c *Cluster) reconcileMembers(running util.MemberSet) error {
+func (c *Controller) reconcileMembers(cl *Cluster, running util.MemberSet) error {
 	log.Println("running members: %s", running)
-	log.Println("cluster membership: %s", c.members)
+	log.Println("cluster membership: %s", cl.members)
 
-	unknownMembers := running.Diff(c.members)
+	unknownMembers := running.Diff(cl.members)
 	if unknownMembers.Size() > 0 {
 		log.Println("removing unexpected pods: %v", unknownMembers)
 		for _, m := range unknownMembers {
-			if err := c.removePod(m.Name); err != nil {
+			if err := c.removePod(cl.cluster.Namespace, m.Name); err != nil {
 				return err
 			}
 		}
 	}
 	L := running.Diff(unknownMembers)
 
-	if L.Size() == c.members.Size() {
-		return c.resize()
+	if L.Size() == cl.members.Size() {
+		return c.resize(cl)
 	}
 
-	if L.Size() < c.members.Size()/2+1 {
+	if L.Size() < cl.members.Size()/2+1 {
 		return ErrLostQuorum
 	}
 
 	log.Println("removing one dead member")
 	// remove dead members that doesn't have any running pods before doing resizing.
-	return c.removeDeadMember(c.members.Diff(L).PickOne())
+	return c.removeDeadMember(cl, cl.members.Diff(L).PickOne())
 }
 
-func (c *Cluster) resize() error {
-	if c.members.Size() == int(*c.cluster.Spec.Replicas) {
+func (c *Controller) resize(cl *Cluster) error {
+	if cl.members.Size() == int(*cl.cluster.Spec.Replicas) {
 		return nil
 	}
 
-	if c.members.Size() < int(*c.cluster.Spec.Replicas) {
-		return c.addOneMember()
+	if cl.members.Size() < int(*cl.cluster.Spec.Replicas) {
+		return c.addOneMember(cl)
 	}
 
-	return c.removeOneMember()
+	return c.removeOneMember(cl)
 }
 
-func (c *Cluster) addOneMember() error {
+func (c *Controller) addOneMember(cl *Cluster) error {
 	cfg := clientv3.Config{
-		Endpoints:   c.members.ClientURLs(),
+		Endpoints:   cl.members.ClientURLs(),
 		DialTimeout: util.DefaultDialTimeout,
-		TLS:         c.tlsConfig,
+		TLS:         cl.tlsConfig,
 	}
-	fmt.Println(cfg, "-----------", c.members.ClientURLs())
+	fmt.Println(cfg, "-----------", cl.members.ClientURLs())
 	etcdcli, err := clientv3.New(cfg)
 	if err != nil {
 		return fmt.Errorf("add one member failed: creating etcd client failed %v", err)
 	}
 	defer etcdcli.Close()
 
-	newMember := c.newMember()
+	newMember := cl.newMember()
 	ctx, cancel := context.WithTimeout(context.Background(), util.DefaultRequestTimeout)
 	resp, err := etcdcli.MemberAdd(ctx, []string{newMember.PeerURL()})
 	cancel()
@@ -99,9 +100,9 @@ func (c *Cluster) addOneMember() error {
 		return fmt.Errorf("fail to add new member (%s): %v", newMember.Name, err)
 	}
 	newMember.ID = resp.Member.ID
-	c.members.Add(newMember)
+	cl.members.Add(newMember)
 
-	_, _, err = c.createPod(c.members, newMember, "existing")
+	_, _, err = c.createPod(cl.cluster, cl.members, newMember, "existing")
 	if err != nil {
 		return fmt.Errorf("fail to create member's pod (%s): %v", newMember.Name, err)
 	}
@@ -133,29 +134,29 @@ func (c *Cluster) addOneMember() error {
 	return nil
 }
 
-func (c *Cluster) removeOneMember() error {
+func (c *Controller) removeOneMember(cl *Cluster) error {
 	fmt.Println("removing member..........................")
-	return c.removeMember(c.members.PickOne())
+	return c.removeMember(cl, cl.members.PickOne())
 }
 
-func (c *Cluster) removeDeadMember(toRemove *util.Member) error {
+func (c *Controller) removeDeadMember(cl *Cluster, toRemove *util.Member) error {
 	log.Println("removing dead member %q", toRemove.Name)
-	_, err := c.eventsCli.Create(util.ReplacingDeadMemberEvent(toRemove.Name, c.cluster))
+	_, err := cl.eventsCli.Create(util.ReplacingDeadMemberEvent(toRemove.Name, cl.cluster))
 	if err != nil {
-		c.logger.Errorf("failed to create replacing dead member event: %v", err)
+		cl.logger.Errorf("failed to create replacing dead member event: %v", err)
 	}
 
-	return c.removeMember(toRemove)
+	return c.removeMember(cl, toRemove)
 }
 
-func (c *Cluster) removeMember(toRemove *util.Member) (err error) {
+func (c *Controller) removeMember(cl *Cluster, toRemove *util.Member) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("remove member (%s) failed: %v", toRemove.Name, err)
 		}
 	}()
 
-	err = util.RemoveMember(c.members.ClientURLs(), c.tlsConfig, toRemove.ID)
+	err = util.RemoveMember(cl.members.ClientURLs(), cl.tlsConfig, toRemove.ID)
 	if err != nil {
 		switch err {
 		case rpctypes.ErrMemberNotFound:
@@ -164,23 +165,23 @@ func (c *Cluster) removeMember(toRemove *util.Member) (err error) {
 			return err
 		}
 	}
-	c.members.Remove(toRemove.Name)
+	cl.members.Remove(toRemove.Name)
 
-	if err := c.removePod(toRemove.Name); err != nil {
+	if err := c.removePod(cl.cluster.Namespace, toRemove.Name); err != nil {
 		return err
 	}
-	if c.cluster.Spec.Storage != nil {
-		err = c.removePVC(toRemove.Name)
+	if cl.cluster.Spec.Storage != nil {
+		err = cl.removePVC(c.Controller.Client, toRemove.Name)
 		if err != nil {
 			return err
 		}
 	}
-	c.logger.Infof("removed member (%v) with ID (%d)", toRemove.Name, toRemove.ID)
+	cl.logger.Infof("removed member (%v) with ID (%d)", toRemove.Name, toRemove.ID)
 	return nil
 }
 
-func (c *Cluster) removePVC(pvcName string) error {
-	err := c.config.KubeCli.Core().PersistentVolumeClaims(c.cluster.Namespace).Delete(pvcName, nil)
+func (c *Cluster) removePVC(client kubernetes.Interface, pvcName string) error {
+	err := client.Core().PersistentVolumeClaims(c.cluster.Namespace).Delete(pvcName, nil)
 	if err != nil && !kerr.IsNotFound(err) {
 		return fmt.Errorf("remove pvc (%s) failed: %v", pvcName, err)
 	}

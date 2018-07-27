@@ -86,10 +86,12 @@ fi
 
 # Wait for etcd to start
 # ref: http://unix.stackexchange.com/a/5279
-while ! nc -z  $DB_HOST $DB_PORT </dev/null; do
-  echo "Waiting... database is not ready yet"
-  sleep 5
-done
+if [ "$op" = "backup" ]; then
+  while ! nc -z  $DB_HOST $DB_PORT </dev/null; do
+    echo "Waiting... database is not ready yet"
+    sleep 5
+  done
+fi
 
 # cleanup data dump dir
 mkdir -p "$DB_DATA_DIR"

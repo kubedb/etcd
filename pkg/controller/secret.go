@@ -7,6 +7,7 @@ import (
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	"github.com/kubedb/apimachinery/pkg/eventer"
+	"github.com/kubedb/apimachinery/pkg/storage"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +21,7 @@ const (
 	KeyEtcdUser     = "user"
 	KeyEtcdPassword = "password"
 
-	ExporterSecretPath = "/var/run/secrets/kubedb.com/"
+	//ExporterSecretPath = "/var/run/secrets/kubedb.com/"
 )
 
 func (c *Controller) ensureDatabaseSecret(etcd *api.Etcd) error {
@@ -106,4 +107,16 @@ func (c *Controller) checkSecret(secretName string, etcd *api.Etcd) (*core.Secre
 		return nil, fmt.Errorf(`intended secret "%v" already exists`, secretName)
 	}
 	return secret, nil
+}
+
+func (c *Controller) createOsmSecret(snapshot *api.Snapshot) error {
+	secret, err := storage.NewOSMSecret(c.Client, snapshot)
+	if err != nil {
+		return err
+	}
+	secret, err = c.Client.CoreV1().Secrets(secret.Namespace).Create(secret)
+	if err != nil && !kerr.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
 }

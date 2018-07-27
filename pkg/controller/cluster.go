@@ -6,18 +6,16 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/appscode/go/log/golog"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	cs "github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1"
+
+	//cs "github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1"
 	dbutil "github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
-	"github.com/kubedb/etcd/pkg/docker"
 	"github.com/kubedb/etcd/pkg/util"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
@@ -59,7 +57,7 @@ type Cluster struct {
 	eventsCli corev1.EventInterface
 }
 
-func (c Controller) NewCluster(etcd *api.Etcd){
+func (c Controller) NewCluster(etcd *api.Etcd) {
 	lg := logrus.WithField("pkg", "cluster").WithField("cluster-name", etcd.Name)
 
 	cluster := &Cluster{
@@ -121,7 +119,6 @@ func (c *Controller) setup(cluster *Cluster) error {
 func (c *Controller) create(cl *Cluster) error {
 	cl.status.Phase = api.DatabasePhaseCreating
 
-	fmt.Println("creating..................")
 	if err := c.updateCRStatus(cl); err != nil {
 		return fmt.Errorf("cluster create: failed to update cluster phase (%v): %v", api.DatabasePhaseCreating, err)
 	}
@@ -139,7 +136,7 @@ func (c *Controller) prepareSeedMember(cl *Cluster) error {
 }
 
 func (c *Controller) bootstrap(cl *Cluster) error {
-	return cl.startSeedMember(c.Controller.Client)
+	return c.startSeedMember(cl)
 }
 
 func (c *Cluster) Update(cl *api.Etcd) {
@@ -154,22 +151,22 @@ func (c *Cluster) Delete() {
 	close(c.stopCh)
 }
 
-func (c *Cluster) startSeedMember() error {
+func (c *Controller) startSeedMember(cl *Cluster) error {
 	m := &util.Member{
-		Name:         util.UniqueMemberName(c.cluster.Name),
-		Namespace:    c.cluster.Namespace,
-		SecurePeer:   c.isSecurePeer(),
-		SecureClient: c.isSecureClient(),
+		Name:         util.UniqueMemberName(cl.cluster.Name),
+		Namespace:    cl.cluster.Namespace,
+		SecurePeer:   cl.isSecurePeer(),
+		SecureClient: cl.isSecureClient(),
 	}
 	ms := util.NewMemberSet(m)
-	if _, _, err := c.createPod(ms, m, "new"); err != nil {
+	if _, _, err := c.createPod(cl.cluster, ms, m, "new"); err != nil {
 		return fmt.Errorf("failed to create seed member (%s): %v", m.Name, err)
 	}
-	c.members = ms
-	c.logger.Infof("cluster created with seed member (%s)", m.Name)
-	_, err := c.eventsCli.Create(util.NewMemberAddEvent(m.Name, c.cluster))
+	cl.members = ms
+	cl.logger.Infof("cluster created with seed member (%s)", m.Name)
+	_, err := cl.eventsCli.Create(util.NewMemberAddEvent(m.Name, cl.cluster))
 	if err != nil {
-		c.logger.Errorf("failed to create new member add event: %v", err)
+		cl.logger.Errorf("failed to create new member add event: %v", err)
 	}
 
 	return nil
@@ -178,11 +175,6 @@ func (c *Cluster) startSeedMember() error {
 func (c *Controller) run(cluster *Cluster) {
 	if err := c.setupServices(cluster); err != nil {
 		cluster.logger.Errorf("fail to setup etcd services: %v", err)
-	}
-	fmt.Println(cluster.status.Phase, "#######################################3")
-	cluster.status.Phase = api.DatabasePhaseCreating
-	if err := c.updateCRStatus(cluster); err != nil {
-		fmt.Println("W: update initial CR status failed: %v", err)
 	}
 	fmt.Println("start running...")
 
@@ -242,13 +234,13 @@ func (c *Controller) run(cluster *Cluster) {
 					break
 				}
 			}
-			rerr = cluster.reconcile(running)
+			rerr = c.reconcile(cluster, running)
 			if rerr != nil {
 				cluster.logger.Errorf("failed to reconcile: %v", rerr)
 				break
 			}
 			//c.updateMemberStatus(running)
-			if err := cluster.updateCRStatus(); err != nil {
+			if err := c.updateCRStatus(cluster); err != nil {
 				cluster.logger.Warningf("periodic update CR status failed: %v", err)
 			}
 
@@ -256,7 +248,7 @@ func (c *Controller) run(cluster *Cluster) {
 		}
 
 		if rerr != nil {
-			cluster.logger.Infoln(rerr, "......................")
+			cluster.logger.Infoln(rerr)
 			//reconcileFailed.WithLabelValues(rerr.Error()).Inc()
 		}
 
@@ -286,9 +278,9 @@ func (c *Cluster) handleUpdateEvent(event *clusterEvent) error {
 	return nil
 }
 
-func (c *Controller) pollPods() (running, pending []*v1.Pod, err error) {
-	podList, err := c.Controller.Client.Core().Pods(c.cluster.Namespace).List(metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(c.cluster.StatefulSetLabels()).String(),
+func (c *Controller) pollPods(cl *Cluster) (running, pending []*v1.Pod, err error) {
+	podList, err := c.Controller.Client.Core().Pods(cl.cluster.Namespace).List(metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(cl.cluster.StatefulSetLabels()).String(),
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to list running pods: %v", err)
@@ -305,9 +297,9 @@ func (c *Controller) pollPods() (running, pending []*v1.Pod, err error) {
 			fmt.Println("pollPods: ignore pod %v: no owner", pod.Name)
 			continue
 		}
-		if pod.OwnerReferences[0].UID != c.cluster.UID {
+		if pod.OwnerReferences[0].UID != cl.cluster.UID {
 			fmt.Println("pollPods: ignore pod %v: owner (%v) is not %v",
-				pod.Name, pod.OwnerReferences[0].UID, c.cluster.UID)
+				pod.Name, pod.OwnerReferences[0].UID, cl.cluster.UID)
 			continue
 		}
 		switch pod.Status.Phase {
@@ -321,10 +313,9 @@ func (c *Controller) pollPods() (running, pending []*v1.Pod, err error) {
 	return running, pending, nil
 }
 
-func (c *Cluster) removePod(name string) error {
-	ns := c.cluster.Namespace
+func (c *Controller) removePod(ns, name string) error {
 	opts := metav1.NewDeleteOptions(podTerminationGracePeriod)
-	err := c.config.KubeCli.Core().Pods(ns).Delete(name, opts)
+	err := c.Controller.Client.Core().Pods(ns).Delete(name, opts)
 	if err != nil {
 		/*if !util.IsKubernetesResourceNotFoundError(err) {
 			return err
