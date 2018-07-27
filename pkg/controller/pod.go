@@ -1,4 +1,4 @@
-package cluster
+package controller
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"github.com/appscode/kutil"
 	core_util "github.com/appscode/kutil/core/v1"
 	meta_util "github.com/appscode/kutil/meta"
+	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/etcd/pkg/util"
 	core "k8s.io/api/core/v1"
@@ -22,7 +23,7 @@ const (
 	// EtcdClientPort is the client port on client service and etcd nodes.
 	EtcdClientPort = 2379
 
-	etcdVolumeMountDir    = "/data/db"
+	etcdVolumeMountDir    = "/var/etcd"
 	dataDir               = etcdVolumeMountDir + "/data"
 	peerTLSDir            = "/etc/etcdtls/member/peer-tls"
 	peerTLSVolume         = "member-peer-tls"
@@ -31,21 +32,17 @@ const (
 	operatorEtcdTLSDir    = "/etc/etcdtls/operator/etcd-tls"
 	operatorEtcdTLSVolume = "etcd-client-tls"
 	ExporterSecretPath    = "/var/run/secrets/kubedb.com/"
-
-	snapshotDumpDir        = "/var/data"
-	snapshotProcessRestore = "restore"
-	defaultDNSTimeout      = int64(0)
 )
 
-func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string) (*core.Pod, kutil.VerbType, error) {
+func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *util.Member, state string) (*core.Pod, kutil.VerbType, error) {
 	initialCluster := members.PeerURLPairs()
 	podMeta := metav1.ObjectMeta{
 		Name:      m.Name,
 		Namespace: m.Namespace,
 	}
-	token := c.cluster.Name
+	token := cluster.Name
 
-	ref, rerr := reference.GetReference(clientsetscheme.Scheme, c.cluster)
+	ref, rerr := reference.GetReference(clientsetscheme.Scheme, cluster)
 	if rerr != nil {
 		return nil, kutil.VerbUnchanged, rerr
 	}
@@ -61,9 +58,38 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 					done`, m.Addr())},
 		},
 	}
-	if _, err := meta_util.GetString(c.cluster.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound &&
-		c.cluster.Spec.Init != nil && c.cluster.Spec.Init.SnapshotSource != nil {
+	osmVolume := core.Volume{}
+	hasOsmVolume := false
+	if _, err := meta_util.GetString(cluster.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound &&
+		cluster.Spec.Init != nil && cluster.Spec.Init.SnapshotSource != nil {
 
+		if err := c.initialize(cluster); err != nil {
+			return nil, kutil.VerbUnchanged, err
+		}
+		snapshotSource := cluster.Spec.Init.SnapshotSource
+		snapshot, err := c.Controller.ExtClient.Snapshots(cluster.Namespace).Get(snapshotSource.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, kutil.VerbUnchanged, err
+		}
+
+		restore, err := c.getRestoreContainer(cluster, snapshot, m, members)
+		if err != nil {
+			return nil, kutil.VerbUnchanged, err
+		}
+		initContainers = append(initContainers, restore...)
+
+		if err = c.createOsmSecret(snapshot); err != nil {
+			return nil, kutil.VerbUnchanged, err
+		}
+		osmVolume = core.Volume{
+			Name: "osmconfig",
+			VolumeSource: core.VolumeSource{
+				Secret: &core.SecretVolumeSource{
+					SecretName: snapshot.OSMSecretName(),
+				},
+			},
+		}
+		hasOsmVolume = true
 	}
 
 	commands := fmt.Sprintf("/usr/local/bin/etcd --data-dir=%s --name=%s --initial-advertise-peer-urls=%s "+
@@ -80,9 +106,9 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 		commands = fmt.Sprintf("%s --initial-cluster-token=%s", commands, token)
 	}
 
-	return core_util.CreateOrPatchPod(c.config.KubeCli, podMeta, func(in *core.Pod) *core.Pod {
+	return core_util.CreateOrPatchPod(c.Controller.Client, podMeta, func(in *core.Pod) *core.Pod {
 		in.ObjectMeta = core_util.EnsureOwnerReference(in.ObjectMeta, ref)
-		in.Labels = core_util.UpsertMap(in.Labels, c.cluster.StatefulSetLabels())
+		in.Labels = core_util.UpsertMap(in.Labels, cluster.StatefulSetLabels())
 		in.Annotations = core_util.UpsertMap(in.Annotations, map[string]string{
 			//	"etcd.version": c.cluster.Spec.Version,
 		})
@@ -95,7 +121,7 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 		readinessProbe.FailureThreshold = 3
 		container := core.Container{
 			Name:            api.ResourceSingularEtcd,
-			Image:           c.config.Docker.GetImageWithTag(c.cluster),
+			Image:           c.docker.GetImageWithTag(cluster),
 			ImagePullPolicy: core.PullAlways,
 			Command:         strings.Split(commands, " "),
 			LivenessProbe:   livenessProbe,
@@ -112,7 +138,7 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 					Protocol:      core.ProtocolTCP,
 				},
 			},
-			Resources: c.cluster.Spec.Resources,
+			Resources: cluster.Spec.Resources,
 		}
 		volumes := []core.Volume{}
 		if m.SecurePeer {
@@ -121,7 +147,7 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 				Name:      peerTLSVolume,
 			})
 			volumes = append(volumes, core.Volume{Name: peerTLSVolume, VolumeSource: core.VolumeSource{
-				Secret: &core.SecretVolumeSource{SecretName: c.cluster.Spec.TLS.Member.PeerSecret},
+				Secret: &core.SecretVolumeSource{SecretName: cluster.Spec.TLS.Member.PeerSecret},
 			}})
 		}
 		if m.SecureClient {
@@ -133,29 +159,33 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 				Name:      operatorEtcdTLSVolume,
 			})
 			volumes = append(volumes, core.Volume{Name: serverTLSVolume, VolumeSource: core.VolumeSource{
-				Secret: &core.SecretVolumeSource{SecretName: c.cluster.Spec.TLS.Member.ServerSecret},
+				Secret: &core.SecretVolumeSource{SecretName: cluster.Spec.TLS.Member.ServerSecret},
 			}}, core.Volume{Name: operatorEtcdTLSVolume, VolumeSource: core.VolumeSource{
-				Secret: &core.SecretVolumeSource{SecretName: c.cluster.Spec.TLS.OperatorSecret},
+				Secret: &core.SecretVolumeSource{SecretName: cluster.Spec.TLS.OperatorSecret},
 			}})
+		}
+
+		if hasOsmVolume {
+			volumes = append(volumes, osmVolume)
 		}
 
 		in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, container)
 		in.Spec.Volumes = core_util.UpsertVolume(in.Spec.Volumes, volumes...)
 
-		if c.cluster.GetMonitoringVendor() == mon_api.VendorPrometheus {
+		if cluster.GetMonitoringVendor() == mon_api.VendorPrometheus {
 			in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, core.Container{
 				Name: "exporter",
 				Args: append([]string{
 					"export",
-					fmt.Sprintf("--address=:%d", c.cluster.Spec.Monitor.Prometheus.Port),
-					fmt.Sprintf("--enable-analytics=%v", c.config.EnableAnalytics),
-				}, c.config.LoggerOptions.ToFlags()...),
-				Image: c.config.Docker.GetOperatorImageWithTag(c.cluster),
+					fmt.Sprintf("--address=:%d", cluster.Spec.Monitor.Prometheus.Port),
+					fmt.Sprintf("--enable-analytics=%v", c.EnableAnalytics),
+				}, c.LoggerOptions.ToFlags()...),
+				Image: c.docker.GetOperatorImageWithTag(cluster),
 				Ports: []core.ContainerPort{
 					{
 						Name:          api.PrometheusExporterPortName,
 						Protocol:      core.ProtocolTCP,
-						ContainerPort: c.cluster.Spec.Monitor.Prometheus.Port,
+						ContainerPort: cluster.Spec.Monitor.Prometheus.Port,
 					},
 				},
 				VolumeMounts: []core.VolumeMount{
@@ -172,7 +202,7 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 					Name: "db-secret",
 					VolumeSource: core.VolumeSource{
 						Secret: &core.SecretVolumeSource{
-							SecretName: c.cluster.Spec.DatabaseSecret.SecretName,
+							SecretName: cluster.Spec.DatabaseSecret.SecretName,
 						},
 					},
 				},
@@ -181,16 +211,14 @@ func (c *Cluster) createPod(members util.MemberSet, m *util.Member, state string
 
 		in.Spec.RestartPolicy = core.RestartPolicyNever
 		in.Spec.Hostname = m.Name
-		in.Spec.Subdomain = c.cluster.Name
+		in.Spec.Subdomain = cluster.Name
 		in.Spec.AutomountServiceAccountToken = func(b bool) *bool { return &b }(false)
 
-		createPodPvc(c.config.KubeCli, m, c.cluster)
-		in = upsertEnv(in, c.cluster)
-		in = upsertDataVolume(in, c.cluster)
+		createPodPvc(c.Controller.Client, m, cluster)
+		in = upsertEnv(in, cluster)
+		in = upsertDataVolume(in, cluster)
 
-		for _, ic := range initContainers {
-			in.Spec.InitContainers = core_util.UpsertContainer(in.Spec.InitContainers, ic)
-		}
+		in.Spec.InitContainers = append(in.Spec.InitContainers, initContainers...)
 
 		return in
 	})
@@ -201,8 +229,8 @@ func newEtcdProbe(isSecure bool) *core.Probe {
 	// etcd pod is alive only if a linearizable get succeeds.
 	cmd := "ETCDCTL_API=3 etcdctl get foo"
 	if isSecure {
-		//tlsFlags := fmt.Sprintf("--cert=%[1]s/%[2]s --key=%[1]s/%[3]s --cacert=%[1]s/%[4]s", operatorEtcdTLSDir, etcdutil.CliCertFile, etcdutil.CliKeyFile, etcdutil.CliCAFile)
-		//cmd = fmt.Sprintf("ETCDCTL_API=3 etcdctl --endpoints=https://localhost:%d %s get foo", EtcdClientPort, tlsFlags)
+		tlsFlags := fmt.Sprintf("--cert=%[1]s/%[2]s --key=%[1]s/%[3]s --cacert=%[1]s/%[4]s", operatorEtcdTLSDir, etcdutil.CliCertFile, etcdutil.CliKeyFile, etcdutil.CliCAFile)
+		cmd = fmt.Sprintf("ETCDCTL_API=3 etcdctl --endpoints=https://localhost:%d %s get foo", EtcdClientPort, tlsFlags)
 	}
 	return &core.Probe{
 		Handler: core.Handler{
@@ -222,7 +250,7 @@ func upsertDataVolume(pod *core.Pod, etcd *api.Etcd) *core.Pod {
 		if container.Name == api.ResourceSingularEtcd {
 			volumeMount := core.VolumeMount{
 				Name:      "data",
-				MountPath: "/data/db",
+				MountPath: etcdVolumeMountDir,
 			}
 			volumeMounts := container.VolumeMounts
 			volumeMounts = core_util.UpsertVolumeMount(volumeMounts, volumeMount)
@@ -314,43 +342,3 @@ func createPodPvc(client kubernetes.Interface, m *util.Member, etcd *api.Etcd) (
 	}
 	return nil, nil
 }
-
-/*func (c *Cluster) getRestoreContainer() []core.Container  {
-	snapshot, err := c.config.EtcdCRCli.Snapshots(c.cluster.Name).Get(snapshotSource.Name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	containers := []core.Container{
-		{
-			Name:  snapshotProcessRestore,
-			Image: c.config.Docker.GetToolsImageWithTag(c.cluster),
-			Args: []string{
-				snapshotProcessRestore,
-				fmt.Sprintf(`--host=%s`, c.cluster.Name),
-				fmt.Sprintf(`--data-dir=%s`, snapshotDumpDir),
-				fmt.Sprintf(`--bucket=%s`, bucket),
-				fmt.Sprintf(`--folder=%s`, folderName),
-				fmt.Sprintf(`--snapshot=%s`, snapshot.Name),
-				fmt.Sprintf(`--enable-analytics=%v`, c.EnableAnalytics),
-			},
-			Env: []core.EnvVar{
-				{
-					Name:  analytics.Key,
-					Value: c.AnalyticsClientID,
-				},
-			},
-			Resources: snapshot.Spec.Resources,
-			VolumeMounts: []core.VolumeMount{
-				{
-					Name:      persistentVolume.Name,
-					MountPath: snapshotDumpDir,
-				},
-				{
-					Name:      "osmconfig",
-					MountPath: storage.SecretMountPath,
-					ReadOnly:  true,
-				},
-			},
-		},
-	}
-}*/

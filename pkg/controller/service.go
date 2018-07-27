@@ -1,4 +1,4 @@
-package cluster
+package controller
 
 import (
 	core_util "github.com/appscode/kutil/core/v1"
@@ -14,7 +14,7 @@ import (
 
 const TolerateUnreadyEndpointsAnnotation = "service.alpha.kubernetes.io/tolerate-unready-endpoints"
 
-func (c *Cluster) CreateClientService() error {
+func (c *Controller) CreateClientService(cl *Cluster) error {
 	ports := []v1.ServicePort{{
 		Name:       "client",
 		Port:       EtcdClientPort,
@@ -22,14 +22,14 @@ func (c *Cluster) CreateClientService() error {
 		Protocol:   v1.ProtocolTCP,
 	}}
 
-	return createService(c.config.KubeCli, ClientServiceName(c.cluster.Name), c.cluster.Namespace, "", ports, c.cluster)
+	return createService(c.Controller.Client, ClientServiceName(cl.cluster.Name), cl.cluster.Namespace, "", ports, cl.cluster)
 }
 
 func ClientServiceName(clusterName string) string {
 	return clusterName + "-client"
 }
 
-func (c *Cluster) CreatePeerService() error {
+func (c *Controller) CreatePeerService(cl *Cluster) error {
 	ports := []v1.ServicePort{{
 		Name:       "client",
 		Port:       EtcdClientPort,
@@ -42,7 +42,7 @@ func (c *Cluster) CreatePeerService() error {
 		Protocol:   v1.ProtocolTCP,
 	}}
 
-	return createService(c.config.KubeCli, c.cluster.Name, c.cluster.Namespace, v1.ClusterIPNone, ports, c.cluster)
+	return createService(c.Controller.Client, cl.cluster.Name, cl.cluster.Namespace, v1.ClusterIPNone, ports, cl.cluster)
 }
 
 func createService(kubecli kubernetes.Interface, svcName, ns, clusterIP string, ports []v1.ServicePort, etcd *api.Etcd) error {

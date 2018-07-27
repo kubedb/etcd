@@ -1,13 +1,13 @@
 apiVersion: kubedb.com/v1alpha1
 kind: Snapshot
 metadata:
-  name: snapshot-y
+  name: snapshot-etcdb
   namespace: demo
   labels:
     kubedb.com/kind: Etcd
 spec:
-  databaseName: etcdb-r
-  storageSecretName: mg-snap-secret
+  databaseName: etcdb
+  storageSecretName: gcs-secret
   gcs:
     bucket: kubedbetcd
     prefix: etcdb

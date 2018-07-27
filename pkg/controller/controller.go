@@ -13,7 +13,6 @@ import (
 	"github.com/kubedb/apimachinery/pkg/controller/dormantdatabase"
 	snapc "github.com/kubedb/apimachinery/pkg/controller/snapshot"
 	"github.com/kubedb/apimachinery/pkg/eventer"
-	"github.com/kubedb/etcd/pkg/cluster"
 	"github.com/kubedb/etcd/pkg/docker"
 	core "k8s.io/api/core/v1"
 	crd_api "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -47,7 +46,7 @@ type Controller struct {
 	// labelselector for event-handler of Snapshot, Dormant and Job
 	selector labels.Selector
 
-	clusters map[string]*cluster.Cluster
+	clusters map[string]*Cluster
 	// Etcd
 	etcdQueue    *queue.Worker
 	etcdInformer cache.SharedIndexInformer
@@ -80,7 +79,7 @@ func New(
 		selector: labels.SelectorFromSet(map[string]string{
 			api.LabelDatabaseKind: api.ResourceKindEtcd,
 		}),
-		clusters: make(map[string]*cluster.Cluster),
+		clusters: make(map[string]*Cluster),
 	}
 }
 
