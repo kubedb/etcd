@@ -87,6 +87,7 @@ func (c Controller) NewCluster(etcd *api.Etcd) {
 }
 
 func (c *Controller) setup(cluster *Cluster) error {
+	fmt.Println(cluster.status.Phase, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 	var shouldCreateCluster bool
 	switch cluster.status.Phase {
 	case "":
@@ -176,6 +177,10 @@ func (c *Controller) run(cluster *Cluster) {
 	if err := c.setupServices(cluster); err != nil {
 		cluster.logger.Errorf("fail to setup etcd services: %v", err)
 	}
+	cluster.status.Phase = api.DatabasePhaseRunning
+	if err := c.updateCRStatus(cluster); err != nil {
+		cluster.logger.Warningf("update initial CR status failed: %v", err)
+	}
 	fmt.Println("start running...")
 
 	var rerr error
@@ -222,6 +227,8 @@ func (c *Controller) run(cluster *Cluster) {
 			}
 			if len(running) == 0 {
 				// TODO: how to handle this case?
+				cluster.Delete()
+				delete(c.clusters, cluster.cluster.Name)
 				cluster.logger.Warningf("all etcd pods are dead.")
 				break
 			}
@@ -262,22 +269,28 @@ func (c *Controller) run(cluster *Cluster) {
 }
 
 func (c *Cluster) handleUpdateEvent(event *clusterEvent) error {
-	//	oldSpec := c.cluster.Spec.DeepCopy()
+	oldSpec := c.cluster.Spec.DeepCopy()
 	c.cluster = event.cluster
 
-	/*	if isSpecEqual(event.cluster.Spec, *oldSpec) {
-			// We have some fields that once created could not be mutated.
-			if !reflect.DeepEqual(event.cluster.Spec, *oldSpec) {
-				c.logger.Infof("ignoring update event: %#v", event.cluster.Spec)
-			}
-			return nil
+	if isSpecEqual(event.cluster.Spec, *oldSpec) {
+		// We have some fields that once created could not be mutated.
+		if !reflect.DeepEqual(event.cluster.Spec, *oldSpec) {
+			c.logger.Infof("ignoring update event: %#v", event.cluster.Spec)
 		}
-		// TODO: we can't handle another upgrade while an upgrade is in progress
+		return nil
+	}
+	// TODO: we can't handle another upgrade while an upgrade is in progress
 
-		c.logSpecUpdate(*oldSpec, event.cluster.Spec)*/
+	//c.logSpecUpdate(*oldSpec, event.cluster.Spec)
 	return nil
 }
 
+func isSpecEqual(s1, s2 api.EtcdSpec) bool {
+	if s1.Replicas != s2.Replicas || s1.Version != s2.Version {
+		return false
+	}
+	return true
+}
 func (c *Controller) pollPods(cl *Cluster) (running, pending []*v1.Pod, err error) {
 	podList, err := c.Controller.Client.Core().Pods(cl.cluster.Namespace).List(metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(cl.cluster.StatefulSetLabels()).String(),

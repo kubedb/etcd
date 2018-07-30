@@ -117,7 +117,7 @@ func (a *EtcdValidator) Admit(req *admission.AdmissionRequest) *admission.Admiss
 }
 
 var (
-	etcdVersions = sets.NewString("3.2.13")
+	etcdVersions = sets.NewString("3.2.13", "3.3.9")
 )
 
 // ValidateEtcd checks if the object satisfies all the requirements.
@@ -236,7 +236,7 @@ func getPreconditionFunc() []mergepatch.PreconditionFunc {
 }
 
 var preconditionSpecFields = []string{
-	"spec.version",
+	//"spec.version",
 	"spec.storage",
 	"spec.databaseSecret",
 	"spec.nodeSelector",

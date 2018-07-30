@@ -8,6 +8,7 @@ import (
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/appscode/go/encoding/json/types"
 )
 
 func NewMemberAddEvent(memberName string, cl *api.Etcd) *v1.Event {
@@ -34,11 +35,11 @@ func ReplacingDeadMemberEvent(memberName string, cl *api.Etcd) *v1.Event {
 	return event
 }
 
-func MemberUpgradedEvent(memberName, oldVersion, newVersion string, cl *api.Etcd) *v1.Event {
+func MemberUpgradedEvent(memberName string, oldVersion, newVersion types.StrYo, cl *api.Etcd) *v1.Event {
 	event := newClusterEvent(cl)
 	event.Type = v1.EventTypeNormal
 	event.Reason = "Member Upgraded"
-	event.Message = fmt.Sprintf("Member %s upgraded from %s to %s ", memberName, oldVersion, newVersion)
+	event.Message = fmt.Sprintf("Member %s upgraded from %v to %v ", memberName, oldVersion, newVersion)
 	return event
 }
 

@@ -19,22 +19,23 @@ var ErrLostQuorum = errors.New("lost quorum")
 
 func (c *Controller) reconcile(cl *Cluster, pods []*v1.Pod) error {
 	sp := cl.cluster.Spec
+
 	running := podsToMemberSet(pods, cl.isSecureClient())
 	if !running.IsEqual(cl.members) || int32(cl.members.Size()) != *sp.Replicas {
 		return c.reconcileMembers(cl, running)
 	}
 	//c.status.ClearCondition(api.ClusterConditionScaling)
 
-	/*if needUpgrade(pods, sp) {
-		c.status.UpgradeVersionTo(sp.Version)
+	if needUpgrade(pods, sp) {
+		//c.status.UpgradeVersionTo(sp.Version)
 
 		m := pickOneOldMember(pods, string(sp.Version))
-		return c.upgradeOneMember(m.Name)
+		return c.upgradeOneMember(cl, m)
 	}
-	c.status.ClearCondition(api.ClusterConditionUpgrading)
+	//c.status.ClearCondition(api.ClusterConditionUpgrading)
 
-	c.status.SetVersion(sp.Version)
-	c.status.SetReadyCondition()*/
+	//c.status.SetVersion(sp.Version)
+	//c.status.SetReadyCondition()
 
 	return nil
 }
@@ -189,7 +190,7 @@ func (c *Cluster) removePVC(client kubernetes.Interface, pvcName string) error {
 }
 
 func needUpgrade(pods []*v1.Pod, cs api.EtcdSpec) bool {
-	return len(pods) == int(*cs.Replicas) && pickOneOldMember(pods, string(cs.Version)) != nil
+	return pickOneOldMember(pods, string(cs.Version)) != nil
 }
 
 func pickOneOldMember(pods []*v1.Pod, newVersion string) *util.Member {

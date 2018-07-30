@@ -4,7 +4,7 @@ metadata:
   name: etcdb-restore
   namespace: demo
 spec:
-  replicas: 1
+  replicas: 3
   version: "3.2.13"
   storage:
     storageClassName: "standard"
@@ -15,5 +15,5 @@ spec:
         storage: 1Gi
   init:
     snapshotSource:
-      name: snapshot-etcdb
+      name: snapshot-et
       namespace: demo

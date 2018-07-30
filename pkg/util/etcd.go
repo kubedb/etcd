@@ -23,6 +23,10 @@ const (
 
 	EnvOperatorPodName      = "MY_POD_NAME"
 	EnvOperatorPodNamespace = "MY_POD_NAMESPACE"
+
+	CliCertFile = "etcd-client.crt"
+	CliKeyFile  = "etcd-client.key"
+	CliCAFile   = "etcd-client-ca.crt"
 )
 
 func ListMembers(clientURLs []string, tc *tls.Config) (*clientv3.MemberListResponse, error) {

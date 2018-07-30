@@ -9,7 +9,6 @@ import (
 	"github.com/appscode/kutil"
 	core_util "github.com/appscode/kutil/core/v1"
 	meta_util "github.com/appscode/kutil/meta"
-	"github.com/coreos/etcd-operator/pkg/util/etcdutil"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/etcd/pkg/util"
 	core "k8s.io/api/core/v1"
@@ -17,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
+	"github.com/appscode/go/encoding/json/types"
 )
 
 const (
@@ -61,7 +61,7 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 	osmVolume := core.Volume{}
 	hasOsmVolume := false
 	if _, err := meta_util.GetString(cluster.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound &&
-		cluster.Spec.Init != nil && cluster.Spec.Init.SnapshotSource != nil {
+		cluster.Spec.Init != nil && cluster.Spec.Init.SnapshotSource != nil  && state == "new"{
 
 		if err := c.initialize(cluster); err != nil {
 			return nil, kutil.VerbUnchanged, err
@@ -225,11 +225,43 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 
 }
 
+func (c *Controller) upgradeOneMember(cl *Cluster, member *util.Member) error {
+	//c.status.Phase = api.c.cluster.Spec.Version)
+
+	ns := cl.cluster.Namespace
+
+	pod, err := c.Controller.Client.CoreV1().Pods(ns).Get(member.Name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("fail to get pod (%s): %v", member.Name, err)
+	}
+	oldpod := pod.DeepCopy()
+
+	//cl.logger.Infof("upgrading the etcd member %v from %s to %s", memberName, k8sutil.GetEtcdVersion(pod), c.cluster.Spec.Version)
+	pod.Spec.Containers[0].Image = c.docker.GetImageWithTag(cl.cluster)
+	//k8sutil.SetEtcdVersion(pod, c.cluster.Spec.Version)
+	//pod.Spec.
+
+	_, _, err = core_util.PatchPod(c.Controller.Client, oldpod, func(in *core.Pod) *core.Pod {
+		in.Spec.Containers[0].Image = c.docker.GetImage(cl.cluster)
+		return in
+	})
+	if err != nil {
+		return fmt.Errorf("fail to update the etcd member (%s): %v", member.Name, err)
+	}
+	cl.logger.Infof("finished upgrading the etcd member %v", member.Name)
+	_, err = cl.eventsCli.Create(util.MemberUpgradedEvent(member.Name, types.StrYo(util.GetEtcdVersion(oldpod)), cl.cluster.Spec.Version, cl.cluster))
+	if err != nil {
+		cl.logger.Errorf("failed to create member upgraded event: %v", err)
+	}
+
+	return nil
+}
+
 func newEtcdProbe(isSecure bool) *core.Probe {
 	// etcd pod is alive only if a linearizable get succeeds.
 	cmd := "ETCDCTL_API=3 etcdctl get foo"
 	if isSecure {
-		tlsFlags := fmt.Sprintf("--cert=%[1]s/%[2]s --key=%[1]s/%[3]s --cacert=%[1]s/%[4]s", operatorEtcdTLSDir, etcdutil.CliCertFile, etcdutil.CliKeyFile, etcdutil.CliCAFile)
+		tlsFlags := fmt.Sprintf("--cert=%[1]s/%[2]s --key=%[1]s/%[3]s --cacert=%[1]s/%[4]s", operatorEtcdTLSDir, util.CliCertFile, util.CliKeyFile, util.CliCAFile)
 		cmd = fmt.Sprintf("ETCDCTL_API=3 etcdctl --endpoints=https://localhost:%d %s get foo", EtcdClientPort, tlsFlags)
 	}
 	return &core.Probe{
