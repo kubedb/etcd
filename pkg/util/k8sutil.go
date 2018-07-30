@@ -3,6 +3,7 @@ package util
 import (
 	"k8s.io/api/core/v1"
 	"strings"
+	"fmt"
 )
 
 const (
@@ -16,21 +17,23 @@ const (
 	serverTLSVolume       = "member-server-tls"
 	operatorEtcdTLSVolume = "etcd-client-tls"
 
-	etcdVersionAnnotationKey = "etcd.version"
+	EtcdVersionAnnotationKey = "etcd.version"
 
 	defaultDNSTimeout = int64(0)
 	EtcdClientPort    = 2379
 )
 
 func GetEtcdVersion(pod *v1.Pod) string {
+	return pod.Annotations[EtcdVersionAnnotationKey]
+	fmt.Println(pod.Name, "<>", pod.Spec.Containers[0].Image)
 	img := pod.Spec.Containers[0].Image
 	tv := strings.Split(img, ":")
-	return tv[1]
+	if(len(tv)>1) {
+		return tv[1]
+	}
+	return ""
 }
 
-func SetEtcdVersion(pod *v1.Pod, version string) {
-	pod.Annotations[etcdVersionAnnotationKey] = version
-}
 
 func GetPodNames(pods []*v1.Pod) []string {
 	if len(pods) == 0 {

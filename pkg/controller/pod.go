@@ -110,7 +110,7 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 		in.ObjectMeta = core_util.EnsureOwnerReference(in.ObjectMeta, ref)
 		in.Labels = core_util.UpsertMap(in.Labels, cluster.StatefulSetLabels())
 		in.Annotations = core_util.UpsertMap(in.Annotations, map[string]string{
-			//	"etcd.version": c.cluster.Spec.Version,
+			util.EtcdVersionAnnotationKey: string(cluster.Spec.Version),
 		})
 
 		livenessProbe := newEtcdProbe(false)
@@ -249,6 +249,7 @@ func (c *Controller) upgradeOneMember(cl *Cluster, member *util.Member) error {
 		return fmt.Errorf("fail to update the etcd member (%s): %v", member.Name, err)
 	}
 	cl.logger.Infof("finished upgrading the etcd member %v", member.Name)
+	fmt.Println("oldpod...........")
 	_, err = cl.eventsCli.Create(util.MemberUpgradedEvent(member.Name, types.StrYo(util.GetEtcdVersion(oldpod)), cl.cluster.Spec.Version, cl.cluster))
 	if err != nil {
 		cl.logger.Errorf("failed to create member upgraded event: %v", err)
