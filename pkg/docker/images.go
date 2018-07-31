@@ -6,9 +6,9 @@ import (
 
 const (
 	ImageKubedbOperator = "operator"
-	ImageEtcdOperator   = "mg-operator"
-	ImageEtcd           = "mongo"
-	ImageEtcdTools      = "mongo-tools"
+	ImageEtcdOperator   = "etcd-operator"
+	ImageEtcd           = "etcd"
+	ImageEtcdTools      = "etcd-tools"
 )
 
 type Docker struct {

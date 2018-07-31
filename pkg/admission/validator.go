@@ -35,11 +35,11 @@ var _ hookapi.AdmissionHook = &EtcdValidator{}
 
 func (a *EtcdValidator) Resource() (plural schema.GroupVersionResource, singular string) {
 	return schema.GroupVersionResource{
-			Group:    "admission.kubedb.com",
+			Group:    "validators.kubedb.com",
 			Version:  "v1alpha1",
-			Resource: "etcdvalidationreviews",
+			Resource: "etcds",
 		},
-		"etcdvalidationreview"
+		"etcd"
 }
 
 func (a *EtcdValidator) Initialize(config *rest.Config, stopCh <-chan struct{}) error {
@@ -117,7 +117,7 @@ func (a *EtcdValidator) Admit(req *admission.AdmissionRequest) *admission.Admiss
 }
 
 var (
-	etcdVersions = sets.NewString("3.4", "3.6")
+	etcdVersions = sets.NewString("3.2.13", "3.3.9")
 )
 
 // ValidateEtcd checks if the object satisfies all the requirements.
@@ -132,13 +132,13 @@ func ValidateEtcd(client kubernetes.Interface, extClient kubedbv1alpha1.KubedbV1
 		return fmt.Errorf(`KubeDB doesn't support Etcd version: %s`, string(etcd.Spec.Version))
 	}
 
-	if etcd.Spec.Replicas == nil || *etcd.Spec.Replicas != 1 {
+	if etcd.Spec.Replicas == nil {
 		return fmt.Errorf(`spec.replicas "%v" invalid. Value must be one`, etcd.Spec.Replicas)
 	}
 
 	if etcd.Spec.Storage != nil {
 		var err error
-		if err = amv.ValidateStorage(client, etcd.Spec.Storage); err != nil {
+		if err = amv.ValidateStorage(client, *etcd.Spec.Storage); err != nil {
 			return err
 		}
 	}
@@ -236,7 +236,7 @@ func getPreconditionFunc() []mergepatch.PreconditionFunc {
 }
 
 var preconditionSpecFields = []string{
-	"spec.version",
+	//"spec.version",
 	"spec.storage",
 	"spec.databaseSecret",
 	"spec.nodeSelector",

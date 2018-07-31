@@ -10,8 +10,8 @@ pushd $REPO_ROOT
 
 rm -rf dist
 
-./hack/docker/mg-operator/make.sh
-./hack/docker/mg-operator/make.sh release
+./hack/docker/etcd-operator/make.sh
+./hack/docker/etcd-operator/make.sh release
 
 rm dist/.tag
 

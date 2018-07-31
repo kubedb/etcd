@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/appscode/go/arrays"
 	mona "github.com/appscode/kube-mon/api"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/pkg/storage"
@@ -14,11 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func ValidateStorage(client kubernetes.Interface, spec *core.PersistentVolumeClaimSpec) error {
-	if spec == nil {
-		return nil
-	}
-
+func ValidateStorage(client kubernetes.Interface, spec core.PersistentVolumeClaimSpec) error {
 	if spec.StorageClassName != nil {
 		if _, err := client.StorageV1beta1().StorageClasses().Get(*spec.StorageClassName, metav1.GetOptions{}); err != nil {
 			if kerr.IsNotFound(err) {
@@ -61,9 +58,12 @@ func ValidateSnapshotSpec(client kubernetes.Interface, spec api.SnapshotStorageS
 		return nil
 	}
 
-	// Need to provide Storage credential secret
-	if spec.StorageSecretName == "" {
-		return fmt.Errorf(`object 'SecretName' is missing in '%v'`, spec)
+	// Note: S3 & GCS bucket can be accessed with default IAM account credential. So do not require secret
+	// Must provide Storage credentials for Azure & Swift
+	if spec.Azure != nil || spec.Swift != nil {
+		if spec.StorageSecretName == "" {
+			return fmt.Errorf(`object 'SecretName' is missing in '%v'`, spec)
+		}
 	}
 
 	if err := storage.CheckBucketAccess(client, spec, namespace); err != nil {
@@ -94,4 +94,14 @@ func ValidateMonitorSpec(monitorSpec *mona.AgentSpec) error {
 	}
 
 	return fmt.Errorf(`invalid 'Agent' in '%v'`, string(specData))
+}
+
+func ValidateEnvVar(envs []core.EnvVar, forbiddenEnvs []string, resourceType string) error {
+	for _, env := range envs {
+		present, _ := arrays.Contains(forbiddenEnvs, env.Name)
+		if present {
+			return fmt.Errorf("environment variable %s is forbidden to use in %s spec", env.Name, resourceType)
+		}
+	}
+	return nil
 }

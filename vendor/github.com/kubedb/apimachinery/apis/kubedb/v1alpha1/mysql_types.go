@@ -32,7 +32,7 @@ type MySQLSpec struct {
 	// Number of instances to deploy for a MySQL database.
 	Replicas *int32 `json:"replicas,omitempty"`
 	// Storage spec to specify how storage shall be used.
-	Storage *core.PersistentVolumeClaimSpec `json:"storage,omitempty"`
+	Storage core.PersistentVolumeClaimSpec `json:"storage"`
 	// Database authentication secret
 	DatabaseSecret *core.SecretVolumeSource `json:"databaseSecret,omitempty"`
 	// NodeSelector is a selector which must be true for the pod to fit on a node
@@ -67,6 +67,10 @@ type MySQLSpec struct {
 	// If specified, these secrets will be passed to individual puller implementations for them to use.
 	// +optional
 	ImagePullSecrets []core.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	// List of environment variables to set in the container.
+	// Cannot be updated.
+	// +optional
+	Env []core.EnvVar `json:"env,omitempty" protobuf:"bytes,7,rep,name=env"`
 }
 
 type MySQLStatus struct {

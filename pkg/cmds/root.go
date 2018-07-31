@@ -23,7 +23,7 @@ const (
 
 func NewRootCmd(version string) *cobra.Command {
 	var rootCmd = &cobra.Command{
-		Use:               "mg-operator",
+		Use:               "etcd-operator",
 		DisableAutoGenTag: true,
 		PersistentPreRun: func(c *cobra.Command, args []string) {
 			c.Flags().VisitAll(func(flag *pflag.Flag) {
@@ -46,6 +46,7 @@ func NewRootCmd(version string) *cobra.Command {
 	rootCmd.PersistentFlags().BoolVar(&controller.EnableAnalytics, "enable-analytics", controller.EnableAnalytics, "Send analytical events to Google Analytics")
 
 	rootCmd.AddCommand(v.NewCmdVersion())
+	rootCmd.AddCommand(NewCmdEtcdHelper())
 
 	stopCh := genericapiserver.SetupSignalHandler()
 	rootCmd.AddCommand(NewCmdRun(os.Stdout, os.Stderr, stopCh))

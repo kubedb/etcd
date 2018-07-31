@@ -19,12 +19,18 @@ import (
 	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	kwatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/reference"
 )
+
+type Event struct {
+	Type   kwatch.EventType
+	Object *api.Etcd
+}
 
 type Controller struct {
 	amc.Config
@@ -40,10 +46,11 @@ type Controller struct {
 	// labelselector for event-handler of Snapshot, Dormant and Job
 	selector labels.Selector
 
+	clusters map[string]*Cluster
 	// Etcd
-	mgQueue    *queue.Worker
-	mgInformer cache.SharedIndexInformer
-	mgLister   api_listers.EtcdLister
+	etcdQueue    *queue.Worker
+	etcdInformer cache.SharedIndexInformer
+	etcdLister   api_listers.EtcdLister
 }
 
 var _ amc.Snapshotter = &Controller{}
@@ -72,6 +79,7 @@ func New(
 		selector: labels.SelectorFromSet(map[string]string{
 			api.LabelDatabaseKind: api.ResourceKindEtcd,
 		}),
+		clusters: make(map[string]*Cluster),
 	}
 }
 
@@ -104,7 +112,7 @@ func (c *Controller) RunControllers(stopCh <-chan struct{}) {
 	c.cronController.StartCron()
 
 	// Watch x  TPR objects
-	c.mgQueue.Run(stopCh)
+	c.etcdQueue.Run(stopCh)
 	c.DrmnQueue.Run(stopCh)
 	c.SnapQueue.Run(stopCh)
 	c.JobQueue.Run(stopCh)
