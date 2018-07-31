@@ -5,19 +5,8 @@ import (
 )
 
 const (
-	etcdVolumeMountDir    = "/var/db"
-	dataDir               = etcdVolumeMountDir + "/data"
-	operatorEtcdTLSDir    = "/etc/etcdtls/operator/etcd-tls"
-	etcdVolumeName        = "etcd-data"
-	peerTLSDir            = "/etc/etcdtls/member/peer-tls"
-	peerTLSVolume         = "member-peer-tls"
-	serverTLSDir          = "/etc/etcdtls/member/server-tls"
-	serverTLSVolume       = "member-server-tls"
-	operatorEtcdTLSVolume = "etcd-client-tls"
-
 	EtcdVersionAnnotationKey = "etcd.version"
 
-	defaultDNSTimeout = int64(0)
 	EtcdClientPort    = 2379
 )
 

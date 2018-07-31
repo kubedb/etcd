@@ -1,4 +1,4 @@
-## mg-operator version
+## etcd-operator version
 
 Prints binary version number.
 
@@ -7,7 +7,7 @@ Prints binary version number.
 Prints binary version number.
 
 ```
-mg-operator version [flags]
+etcd-operator version [flags]
 ```
 
 ### Options
@@ -32,5 +32,5 @@ mg-operator version [flags]
 
 ### SEE ALSO
 
-* [mg-operator](mg-operator.md)	 - 
+* [etcd-operator](etcd-operator.md)	 - 
 

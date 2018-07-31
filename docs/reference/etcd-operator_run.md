@@ -1,4 +1,4 @@
-## mg-operator run
+## etcd-operator run
 
 Launch Etcd server
 
@@ -7,7 +7,7 @@ Launch Etcd server
 Launch Etcd server
 
 ```
-mg-operator run [flags]
+etcd-operator run [flags]
 ```
 
 ### Options
@@ -71,5 +71,5 @@ mg-operator run [flags]
 
 ### SEE ALSO
 
-* [mg-operator](mg-operator.md)	 - 
+* [etcd-operator](etcd-operator.md)	 - 
 
