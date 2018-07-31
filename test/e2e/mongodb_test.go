@@ -862,7 +862,7 @@ var _ = Describe("Etcd", func() {
 						secret = f.SecretForLocalBackend()
 						etcd.Spec.BackupSchedule = &api.BackupScheduleSpec{
 							CronExpression: "@every 1m",
-							SnapshotStorageSpec: api.SnapshotStorageSpec{
+							Backend: api.Backend{
 								StorageSecretName: secret.Name,
 								Local: &api.LocalSpec{
 									MountPath: "/repo",
@@ -882,7 +882,7 @@ var _ = Describe("Etcd", func() {
 						secret = f.SecretForGCSBackend()
 						etcd.Spec.BackupSchedule = &api.BackupScheduleSpec{
 							CronExpression: "@every 1m",
-							SnapshotStorageSpec: api.SnapshotStorageSpec{
+							Backend: api.Backend{
 								StorageSecretName: secret.Name,
 								GCS: &api.GCSSpec{
 									Bucket: os.Getenv(GCS_BUCKET_NAME),
@@ -910,7 +910,7 @@ var _ = Describe("Etcd", func() {
 					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *api.Etcd) *api.Etcd {
 						in.Spec.BackupSchedule = &api.BackupScheduleSpec{
 							CronExpression: "@every 1m",
-							SnapshotStorageSpec: api.SnapshotStorageSpec{
+							Backend: api.Backend{
 								StorageSecretName: secret.Name,
 								Local: &api.LocalSpec{
 									MountPath: "/repo",
@@ -957,7 +957,7 @@ var _ = Describe("Etcd", func() {
 					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *api.Etcd) *api.Etcd {
 						in.Spec.BackupSchedule = &api.BackupScheduleSpec{
 							CronExpression: "@every 1m",
-							SnapshotStorageSpec: api.SnapshotStorageSpec{
+							Backend: api.Backend{
 								StorageSecretName: secret.Name,
 								Local: &api.LocalSpec{
 									MountPath: "/repo",

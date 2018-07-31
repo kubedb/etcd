@@ -489,6 +489,13 @@ func schema_pkg_client_monitoring_v1_AlertmanagerSpec(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
+					"tag": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tag of Alertmanager container image to be deployed. Defaults to the value of `version`.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"baseImage": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Base image that is used to deploy pods, without tag.",
@@ -1111,6 +1118,13 @@ func schema_pkg_client_monitoring_v1_PrometheusSpec(ref common.ReferenceCallback
 							Format:      "",
 						},
 					},
+					"tag": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tag of Prometheus container image to be deployed. Defaults to the value of `version`.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"paused": {
 						SchemaProps: spec.SchemaProps{
 							Description: "When a Prometheus deployment is paused, no actions except for deletion will be performed on the underlying objects.",
@@ -1209,7 +1223,7 @@ func schema_pkg_client_monitoring_v1_PrometheusSpec(ref common.ReferenceCallback
 					},
 					"ruleSelector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "A selector to select which PrometheusRules to mount for loading alerting rules from.",
+							Description: "A selector to select which PrometheusRules to mount for loading alerting rules from. Until (excluding) Prometheus Operator v0.24.0 Prometheus Operator will migrate any legacy rule config maps to PrometheusRule custom resources selected by RuleSelector. Make sure it does not match any config maps that you do not want to be migrated.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
 						},
 					},
@@ -2137,6 +2151,13 @@ func schema_pkg_client_monitoring_v1_ThanosSpec(ref common.ReferenceCallback) co
 					"version": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Version describes the version of Thanos to use.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"tag": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tag of Thanos sidecar container image to be deployed. Defaults to the value of `version`.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

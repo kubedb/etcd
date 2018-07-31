@@ -4,14 +4,14 @@ import:
   version: master
 - package: github.com/appscode/pat
 - package: github.com/coreos/prometheus-operator
-  version: ccf8867cdb9e5bd099093e27cfdb5fecce15c90b
+  version: v0.22.2
 - package: github.com/graymeta/stow
   repo: https://github.com/appscode/stow.git
   vcs: git
   version: master
 - package: github.com/jpillora/go-ogle-analytics
 - package: github.com/kubedb/apimachinery
-  version: etcd
+  version: master
 - package: github.com/spf13/cobra
   version: v0.0.3
 - package: github.com/spf13/pflag
@@ -25,16 +25,24 @@ import:
   vcs: git
   version: release-1.11
 - package: k8s.io/apiserver
-  version: kubernetes-1.11.0
+  repo: https://github.com/pharmer/apiserver.git
+  vcs: git
+  version: k-1.11
 - package: k8s.io/client-go
   version: v8.0.0
 - package: k8s.io/kube-aggregator
   version: kubernetes-1.11.0
 - package: github.com/appscode/kutil
   version: release-8.0
-- package: github.com/appscode/kube-mon
-  version: release-8.0
 - package: github.com/appscode/kubernetes-webhook-util
+  version: release-8.0
+- package: kmodules.xyz/monitoring-agent-api
+  repo: https://github.com/kmodules/monitoring-agent-api.git
+  vcs: git
+  version: release-8.0
+- package: kmodules.xyz/objectstore-api
+  repo: https://github.com/kmodules/objectstore-api.git
+  vcs: git
   version: release-8.0
 - package: github.com/openshift/api
   version: 31a7bbd2266d178da3c12bb83f5274d387f775e6

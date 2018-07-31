@@ -65,6 +65,8 @@ type PrometheusSpec struct {
 	ServiceMonitorNamespaceSelector *metav1.LabelSelector `json:"serviceMonitorNamespaceSelector,omitempty"`
 	// Version of Prometheus to be deployed.
 	Version string `json:"version,omitempty"`
+	// Tag of Prometheus container image to be deployed. Defaults to the value of `version`.
+	Tag string `json:"tag,omitempty"`
 	// When a Prometheus deployment is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	Paused bool `json:"paused,omitempty"`
@@ -99,7 +101,10 @@ type PrometheusSpec struct {
 	// Storage spec to specify how storage shall be used.
 	Storage *StorageSpec `json:"storage,omitempty"`
 	// A selector to select which PrometheusRules to mount for loading alerting
-	// rules from.
+	// rules from. Until (excluding) Prometheus Operator v0.24.0 Prometheus
+	// Operator will migrate any legacy rule config maps to PrometheusRule custom
+	// resources selected by RuleSelector. Make sure it does not match any config
+	// maps that you do not want to be migrated.
 	RuleSelector *metav1.LabelSelector `json:"ruleSelector,omitempty"`
 	// Namespaces to be selected for PrometheusRules discovery. If unspecified, only
 	// the same namespace as the Prometheus object is in is used.
@@ -231,6 +236,8 @@ type ThanosSpec struct {
 	Peers *string `json:"peers,omitempty"`
 	// Version describes the version of Thanos to use.
 	Version *string `json:"version,omitempty"`
+	// Tag of Thanos sidecar container image to be deployed. Defaults to the value of `version`.
+	Tag *string `json:"tag,omitempty"`
 	// Thanos base image if other than default.
 	BaseImage *string `json:"baseImage,omitempty"`
 	// GCS configures use of GCS in Thanos.
@@ -555,6 +562,8 @@ type AlertmanagerSpec struct {
 	PodMetadata *metav1.ObjectMeta `json:"podMetadata,omitempty"`
 	// Version the cluster should be on.
 	Version string `json:"version,omitempty"`
+	// Tag of Alertmanager container image to be deployed. Defaults to the value of `version`.
+	Tag string `json:"tag,omitempty"`
 	// Base image that is used to deploy pods, without tag.
 	BaseImage string `json:"baseImage,omitempty"`
 	// An optional list of references to secrets in the same namespace

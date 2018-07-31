@@ -7,7 +7,7 @@ import (
 const (
 	EtcdVersionAnnotationKey = "etcd.version"
 
-	EtcdClientPort    = 2379
+	EtcdClientPort = 2379
 )
 
 func GetEtcdVersion(pod *v1.Pod) string {
