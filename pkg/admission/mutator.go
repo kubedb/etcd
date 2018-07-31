@@ -189,7 +189,7 @@ func setMonitoringPort(etcd *api.Etcd) {
 			etcd.Spec.Monitor.Prometheus = &mon_api.PrometheusSpec{}
 		}
 		if etcd.Spec.Monitor.Prometheus.Port == 0 {
-			etcd.Spec.Monitor.Prometheus.Port = api.PrometheusExporterPortNumber
+			etcd.Spec.Monitor.Prometheus.Port = 2379  //api.PrometheusExporterPortNumber
 		}
 	}
 }

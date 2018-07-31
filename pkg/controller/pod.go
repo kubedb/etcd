@@ -173,7 +173,7 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 		in.Spec.Volumes = core_util.UpsertVolume(in.Spec.Volumes, volumes...)
 
 		if cluster.GetMonitoringVendor() == mon_api.VendorPrometheus {
-			in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, core.Container{
+			/*in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, core.Container{
 				Name: "exporter",
 				Args: append([]string{
 					"export",
@@ -188,25 +188,7 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 						ContainerPort: cluster.Spec.Monitor.Prometheus.Port,
 					},
 				},
-				VolumeMounts: []core.VolumeMount{
-					{
-						Name:      "db-secret",
-						MountPath: ExporterSecretPath,
-						ReadOnly:  true,
-					},
-				},
-			})
-			in.Spec.Volumes = core_util.UpsertVolume(
-				in.Spec.Volumes,
-				core.Volume{
-					Name: "db-secret",
-					VolumeSource: core.VolumeSource{
-						Secret: &core.SecretVolumeSource{
-							SecretName: cluster.Spec.DatabaseSecret.SecretName,
-						},
-					},
-				},
-			)
+			})*/
 		}
 
 		in.Spec.RestartPolicy = core.RestartPolicyNever
