@@ -87,7 +87,6 @@ func (c Controller) NewCluster(etcd *api.Etcd) {
 }
 
 func (c *Controller) setup(cluster *Cluster) error {
-	fmt.Println(cluster.status.Phase, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 	var shouldCreateCluster bool
 	switch cluster.status.Phase {
 	case "":
@@ -100,12 +99,12 @@ func (c *Controller) setup(cluster *Cluster) error {
 		return fmt.Errorf("unexpected cluster phase: %s", cluster.status.Phase)
 	}
 
-	/*if c.isSecureClient() {
-		d, err := k8sutil.GetTLSDataFromSecret(c.config.KubeCli, c.cluster.Namespace, c.cluster.Spec.TLS.Static.OperatorSecret)
+	/*if cluster.isSecureClient() {
+		d, err := util.GetTLSDataFromSecret(c.config.KubeCli, c.cluster.Namespace, c.cluster.Spec.TLS.Static.OperatorSecret)
 		if err != nil {
 			return err
 		}
-		c.tlsConfig, err = etcdutil.NewTLSConfig(d.CertData, d.KeyData, d.CAData)
+		cluster.tlsConfig, err = util.NewTLSConfig(d.CertData, d.KeyData, d.CAData)
 		if err != nil {
 			return err
 		}
@@ -181,7 +180,6 @@ func (c *Controller) run(cluster *Cluster) {
 	if err := c.updateCRStatus(cluster); err != nil {
 		cluster.logger.Warningf("update initial CR status failed: %v", err)
 	}
-	fmt.Println("start running...")
 
 	var rerr error
 	for {
@@ -227,8 +225,8 @@ func (c *Controller) run(cluster *Cluster) {
 			}
 			if len(running) == 0 {
 				// TODO: how to handle this case?
-				cluster.Delete()
-				delete(c.clusters, cluster.cluster.Name)
+				//		cluster.Delete()
+				//	delete(c.clusters, cluster.cluster.Name)
 				cluster.logger.Warningf("all etcd pods are dead.")
 				break
 			}
@@ -371,8 +369,6 @@ func (c *Cluster) isSecureClient() bool {
 }
 
 func (c *Controller) updateCRStatus(cl *Cluster) error {
-	/*cl, er := json.Marshal(c.cluster)
-	fmt.Println(string(cl), er)*/
 	if reflect.DeepEqual(cl.cluster.Status, cl.status) {
 		return nil
 	}

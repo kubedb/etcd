@@ -2,8 +2,6 @@ package util
 
 import (
 	"k8s.io/api/core/v1"
-	"strings"
-	"fmt"
 )
 
 const (
@@ -25,15 +23,7 @@ const (
 
 func GetEtcdVersion(pod *v1.Pod) string {
 	return pod.Annotations[EtcdVersionAnnotationKey]
-	fmt.Println(pod.Name, "<>", pod.Spec.Containers[0].Image)
-	img := pod.Spec.Containers[0].Image
-	tv := strings.Split(img, ":")
-	if(len(tv)>1) {
-		return tv[1]
-	}
-	return ""
 }
-
 
 func GetPodNames(pods []*v1.Pod) []string {
 	if len(pods) == 0 {

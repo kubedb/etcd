@@ -86,7 +86,6 @@ func (c *Controller) addOneMember(cl *Cluster) error {
 		DialTimeout: util.DefaultDialTimeout,
 		TLS:         cl.tlsConfig,
 	}
-	fmt.Println(cfg, "-----------", cl.members.ClientURLs())
 	etcdcli, err := clientv3.New(cfg)
 	if err != nil {
 		return fmt.Errorf("add one member failed: creating etcd client failed %v", err)
@@ -108,6 +107,10 @@ func (c *Controller) addOneMember(cl *Cluster) error {
 		return fmt.Errorf("fail to create member's pod (%s): %v", newMember.Name, err)
 	}
 	log.Println("added member (%s)", newMember.Name)
+	_, err = cl.eventsCli.Create(util.NewMemberAddEvent(newMember.Name, cl.cluster))
+	if err != nil {
+		cl.logger.Errorf("failed to create new member add event: %v", err)
+	}
 	// Check StatefulSet Pod status
 	/*if vt != kutil.VerbUnchanged {
 		if err := c.checkStatefulSetPodStatus(statefulSet); err != nil {
@@ -136,7 +139,6 @@ func (c *Controller) addOneMember(cl *Cluster) error {
 }
 
 func (c *Controller) removeOneMember(cl *Cluster) error {
-	fmt.Println("removing member..........................")
 	return c.removeMember(cl, cl.members.PickOne())
 }
 
@@ -190,7 +192,7 @@ func (c *Cluster) removePVC(client kubernetes.Interface, pvcName string) error {
 }
 
 func needUpgrade(pods []*v1.Pod, cs api.EtcdSpec) bool {
-	return pickOneOldMember(pods, string(cs.Version)) != nil
+	return len(pods) == int(*cs.Replicas) && pickOneOldMember(pods, string(cs.Version)) != nil
 }
 
 func pickOneOldMember(pods []*v1.Pod, newVersion string) *util.Member {

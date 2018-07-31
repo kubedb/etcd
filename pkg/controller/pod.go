@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/appscode/go/encoding/json/types"
 	"github.com/appscode/go/log"
 	mon_api "github.com/appscode/kube-mon/api"
 	"github.com/appscode/kutil"
@@ -16,7 +17,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
-	"github.com/appscode/go/encoding/json/types"
 )
 
 const (
@@ -61,7 +61,7 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 	osmVolume := core.Volume{}
 	hasOsmVolume := false
 	if _, err := meta_util.GetString(cluster.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound &&
-		cluster.Spec.Init != nil && cluster.Spec.Init.SnapshotSource != nil  && state == "new"{
+		cluster.Spec.Init != nil && cluster.Spec.Init.SnapshotSource != nil && state == "new" {
 
 		if err := c.initialize(cluster); err != nil {
 			return nil, kutil.VerbUnchanged, err
@@ -236,20 +236,20 @@ func (c *Controller) upgradeOneMember(cl *Cluster, member *util.Member) error {
 	}
 	oldpod := pod.DeepCopy()
 
-	//cl.logger.Infof("upgrading the etcd member %v from %s to %s", memberName, k8sutil.GetEtcdVersion(pod), c.cluster.Spec.Version)
+	cl.logger.Infof("upgrading the etcd member %v from %s to %s", member.Name, util.GetEtcdVersion(pod), string(cl.cluster.Spec.Version))
 	pod.Spec.Containers[0].Image = c.docker.GetImageWithTag(cl.cluster)
 	//k8sutil.SetEtcdVersion(pod, c.cluster.Spec.Version)
 	//pod.Spec.
 
 	_, _, err = core_util.PatchPod(c.Controller.Client, oldpod, func(in *core.Pod) *core.Pod {
-		in.Spec.Containers[0].Image = c.docker.GetImage(cl.cluster)
+		in.Spec.Containers[0].Image = c.docker.GetImageWithTag(cl.cluster)
+		in.Annotations[util.EtcdVersionAnnotationKey] = string(cl.cluster.Spec.Version)
 		return in
 	})
 	if err != nil {
 		return fmt.Errorf("fail to update the etcd member (%s): %v", member.Name, err)
 	}
 	cl.logger.Infof("finished upgrading the etcd member %v", member.Name)
-	fmt.Println("oldpod...........")
 	_, err = cl.eventsCli.Create(util.MemberUpgradedEvent(member.Name, types.StrYo(util.GetEtcdVersion(oldpod)), cl.cluster.Spec.Version, cl.cluster))
 	if err != nil {
 		cl.logger.Errorf("failed to create member upgraded event: %v", err)

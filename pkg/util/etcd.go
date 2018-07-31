@@ -30,7 +30,6 @@ const (
 )
 
 func ListMembers(clientURLs []string, tc *tls.Config) (*clientv3.MemberListResponse, error) {
-	fmt.Println("listing member...................", clientURLs)
 	cfg := clientv3.Config{
 		Endpoints:   clientURLs,
 		DialTimeout: DefaultDialTimeout,
