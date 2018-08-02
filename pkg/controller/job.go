@@ -190,7 +190,7 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 							},
 						},
 					},
-					ImagePullSecrets: etcd.Spec.ImagePullSecrets,
+					ImagePullSecrets: snapshot.Spec.PodTemplate.Spec.ImagePullSecrets,
 					Volumes: []core.Volume{
 						{
 							Name:         persistentVolume.Name,

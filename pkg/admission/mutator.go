@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	mon_api "kmodules.xyz/monitoring-agent-api/api"
+	mona "kmodules.xyz/monitoring-agent-api/api/v1"
 )
 
 type EtcdMutator struct {
@@ -184,9 +184,9 @@ func setDefaultsFromDormantDB(extClient cs.Interface, etcd *api.Etcd) error {
 // and the AgentVendor is Prometheus.
 func setMonitoringPort(etcd *api.Etcd) {
 	if etcd.Spec.Monitor != nil &&
-		etcd.GetMonitoringVendor() == mon_api.VendorPrometheus {
+		etcd.GetMonitoringVendor() == mona.VendorPrometheus {
 		if etcd.Spec.Monitor.Prometheus == nil {
-			etcd.Spec.Monitor.Prometheus = &mon_api.PrometheusSpec{}
+			etcd.Spec.Monitor.Prometheus = &mona.PrometheusSpec{}
 		}
 		if etcd.Spec.Monitor.Prometheus.Port == 0 {
 			etcd.Spec.Monitor.Prometheus.Port = 2379 //api.PrometheusExporterPortNumber
