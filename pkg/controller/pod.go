@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
-	mon_api "kmodules.xyz/monitoring-agent-api/api"
+	mona "kmodules.xyz/monitoring-agent-api/api/v1"
 )
 
 const (
@@ -138,9 +138,9 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 					Protocol:      core.ProtocolTCP,
 				},
 			},
-			Resources: cluster.Spec.Resources,
+			Resources: cluster.Spec.PodTemplate.Spec.Resources,
 		}
-		volumes := []core.Volume{}
+		var volumes []core.Volume
 		if m.SecurePeer {
 			container.VolumeMounts = append(container.VolumeMounts, core.VolumeMount{
 				MountPath: peerTLSDir,
@@ -172,7 +172,7 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 		in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, container)
 		in.Spec.Volumes = core_util.UpsertVolume(in.Spec.Volumes, volumes...)
 
-		if cluster.GetMonitoringVendor() == mon_api.VendorPrometheus {
+		if cluster.GetMonitoringVendor() == mona.VendorPrometheus {
 			/*in.Spec.Containers = core_util.UpsertContainer(in.Spec.Containers, core.Container{
 				Name: "exporter",
 				Args: append([]string{

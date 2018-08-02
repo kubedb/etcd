@@ -1,5 +1,5 @@
-hash: 8f138f08ad42f8195553aca86ee603234006befb5960a144b4712ddaeb756541
-updated: 2018-07-31T14:44:50.006568557-07:00
+hash: 4976eba8b78b57c15918c915c9af4c50d2ad2c3e56b25e8cdb618bf911b32acb
+updated: 2018-08-01T18:28:16.415205656-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -224,7 +224,7 @@ imports:
 - name: github.com/emicklei/go-restful-swagger12
   version: dcef7f55730566d41eae5db10e7d6981829720f6
 - name: github.com/evanphx/json-patch
-  version: 94e38aa1586e8a6c8a75770bddf5ff84c48a106b
+  version: afac545df32f2287a079e2dfb7ba2745a643747e
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-bongo/bongo
@@ -323,7 +323,7 @@ imports:
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/kubedb/apimachinery
-  version: 4b787646ee6e382fd06933d1f7acf240f8027e06
+  version: 883ae26a8ff0a28ffc2c36ba7c34f2532cefae21
   subpackages:
   - apis/kubedb
   - apis/kubedb/v1alpha1
@@ -450,7 +450,7 @@ imports:
   subpackages:
   - diffmatchpatch
 - name: github.com/sirupsen/logrus
-  version: d26492970760ca5d33129d2d799e34be5c4782eb
+  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/spf13/cobra
   version: ef82de70bb3f60c65fb8eebacbb2d122ef517385
   subpackages:
@@ -964,19 +964,25 @@ imports:
   - pkg/util
   - pkg/util/proto
 - name: kmodules.xyz/monitoring-agent-api
-  version: 323ed6f2129deea0309979d9396728c613f369d4
+  version: 2b926a410fbfe224acd3297619e15734eb0ad75d
   repo: https://github.com/kmodules/monitoring-agent-api.git
   vcs: git
   subpackages:
   - agents
   - agents/coreosprometheusoperator
   - agents/prometheusbuiltin
-  - api
+  - api/v1
 - name: kmodules.xyz/objectstore-api
-  version: f2d3726e2b0438b0b7264f8bf62edf928e5ca962
+  version: 5437829d6e1c97de1c3effe5f2dc6cbca2e0bfd4
   repo: https://github.com/kmodules/objectstore-api.git
   vcs: git
   subpackages:
-  - api
+  - api/v1
   - osm
+- name: kmodules.xyz/offshoot-api
+  version: ca509dced59191f2fe70d49a5e238ec92016a8eb
+  repo: https://github.com/kmodules/offshoot-api.git
+  vcs: git
+  subpackages:
+  - api/v1
 testImports: []
