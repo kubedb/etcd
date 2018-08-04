@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"fmt"
-
 	"github.com/appscode/go/log"
 	core_util "github.com/appscode/kutil/core/v1"
 	meta_util "github.com/appscode/kutil/meta"
@@ -57,9 +55,7 @@ func (c *Controller) runEtcd(key string) error {
 				Object: etcd,
 			}
 			err = c.handleEtcdEvent(ev)
-			fmt.Println(err, "...............****************************")
 			if core_util.HasFinalizer(etcd.ObjectMeta, api.GenericKey) {
-				util.AssignTypeKind(etcd)
 				if err := c.pause(etcd); err != nil {
 					log.Errorln(err)
 					return err
@@ -75,7 +71,6 @@ func (c *Controller) runEtcd(key string) error {
 				in.ObjectMeta = core_util.AddFinalizer(in.ObjectMeta, api.GenericKey)
 				return in
 			})
-			util.AssignTypeKind(etcd)
 			if err := c.syncEtcd(etcd); err != nil {
 				log.Errorln(err)
 				c.pushFailureEvent(etcd, err.Error())

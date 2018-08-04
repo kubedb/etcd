@@ -60,7 +60,7 @@ func createService(kubecli kubernetes.Interface, svcName, ns, clusterIP string, 
 }
 
 func newEtcdServiceManifest(svcName, clusterIP string, ports []v1.ServicePort, etcd *api.Etcd) *v1.Service {
-	labels := etcd.OffshootLabels()
+	labels := etcd.OffshootSelectors()
 	svc := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      svcName,
