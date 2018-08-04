@@ -77,7 +77,7 @@ func (c *Controller) createDatabaseSecret(etcd *api.Etcd) (*core.SecretVolumeSou
 		secret := &core.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   authSecretName,
-				Labels: etcd.OffshootLabels(),
+				Labels: etcd.OffshootSelectors(),
 			},
 			Type: core.SecretTypeOpaque,
 			StringData: map[string]string{
