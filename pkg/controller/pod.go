@@ -108,7 +108,7 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 
 	return core_util.CreateOrPatchPod(c.Controller.Client, podMeta, func(in *core.Pod) *core.Pod {
 		in.ObjectMeta = core_util.EnsureOwnerReference(in.ObjectMeta, ref)
-		in.Labels = core_util.UpsertMap(in.Labels, cluster.StatefulSetLabels())
+		in.Labels = core_util.UpsertMap(in.Labels, cluster.OffshootLabels())
 		in.Annotations = core_util.UpsertMap(in.Annotations, map[string]string{
 			util.EtcdVersionAnnotationKey: string(cluster.Spec.Version),
 		})
