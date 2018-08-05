@@ -45,20 +45,32 @@ func (m MySQL) ServiceName() string {
 	return m.OffshootName()
 }
 
-func (m MySQL) ServiceMonitorName() string {
+type mySQLStatsService struct {
+	*MySQL
+}
+
+func (m mySQLStatsService) GetNamespace() string {
+	return m.MySQL.GetNamespace()
+}
+
+func (m mySQLStatsService) ServiceName() string {
+	return m.OffshootName() + "-stats"
+}
+
+func (m mySQLStatsService) ServiceMonitorName() string {
 	return fmt.Sprintf("kubedb-%s-%s", m.Namespace, m.Name)
 }
 
-func (m MySQL) Path() string {
+func (m mySQLStatsService) Path() string {
 	return fmt.Sprintf("/kubedb.com/v1alpha1/namespaces/%s/%s/%s/metrics", m.Namespace, m.ResourcePlural(), m.Name)
 }
 
-func (m MySQL) Scheme() string {
+func (m mySQLStatsService) Scheme() string {
 	return ""
 }
 
-func (m *MySQL) StatsAccessor() mona.StatsAccessor {
-	return m
+func (m MySQL) StatsService() mona.StatsAccessor {
+	return &mySQLStatsService{&m}
 }
 
 func (m *MySQL) GetMonitoringVendor() string {
@@ -75,6 +87,7 @@ func (m MySQL) CustomResourceDefinition() *apiextensions.CustomResourceDefinitio
 		Singular:      ResourceSingularMySQL,
 		Kind:          ResourceKindMySQL,
 		ShortNames:    []string{ResourceCodeMySQL},
+		Categories:    []string{"datastore", "kubedb", "appscode"},
 		ResourceScope: string(apiextensions.NamespaceScoped),
 		Versions: []apiextensions.CustomResourceDefinitionVersion{
 			{
@@ -86,9 +99,10 @@ func (m MySQL) CustomResourceDefinition() *apiextensions.CustomResourceDefinitio
 		Labels: crdutils.Labels{
 			LabelsMap: map[string]string{"app": "kubedb"},
 		},
-		SpecDefinitionName:    "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MySQL",
-		EnableValidation:      true,
-		GetOpenAPIDefinitions: GetOpenAPIDefinitions,
+		SpecDefinitionName:      "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MySQL",
+		EnableValidation:        true,
+		GetOpenAPIDefinitions:   GetOpenAPIDefinitions,
+		EnableStatusSubresource: EnableStatusSubresource,
 		AdditionalPrinterColumns: []apiextensions.CustomResourceColumnDefinition{
 			{
 				Name:     "Version",
@@ -107,4 +121,42 @@ func (m MySQL) CustomResourceDefinition() *apiextensions.CustomResourceDefinitio
 			},
 		},
 	}, setNameSchema)
+}
+
+func (m *MySQL) Migrate() {
+	if m == nil {
+		return
+	}
+	m.Spec.Migrate()
+}
+
+func (m *MySQLSpec) Migrate() {
+	if m == nil {
+		return
+	}
+	m.BackupSchedule.Migrate()
+	if len(m.NodeSelector) > 0 {
+		m.PodTemplate.Spec.NodeSelector = m.NodeSelector
+		m.NodeSelector = nil
+	}
+	if m.Resources != nil {
+		m.PodTemplate.Spec.Resources = *m.Resources
+		m.Resources = nil
+	}
+	if m.Affinity != nil {
+		m.PodTemplate.Spec.Affinity = m.Affinity
+		m.Affinity = nil
+	}
+	if len(m.SchedulerName) > 0 {
+		m.PodTemplate.Spec.SchedulerName = m.SchedulerName
+		m.SchedulerName = ""
+	}
+	if len(m.Tolerations) > 0 {
+		m.PodTemplate.Spec.Tolerations = m.Tolerations
+		m.Tolerations = nil
+	}
+	if len(m.ImagePullSecrets) > 0 {
+		m.PodTemplate.Spec.ImagePullSecrets = m.ImagePullSecrets
+		m.ImagePullSecrets = nil
+	}
 }

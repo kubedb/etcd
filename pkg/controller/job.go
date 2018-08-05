@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	core_util "github.com/appscode/kutil/core/v1"
 	"github.com/appscode/kutil/tools/analytics"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/pkg/eventer"
@@ -18,9 +19,7 @@ import (
 )
 
 const (
-	snapshotDumpDir        = etcdVolumeMountDir + "/snapshot"
-	snapshotProcessRestore = "restore"
-	snapshotProcessBackup  = "backup"
+	snapshotDumpDir = etcdVolumeMountDir + "/snapshot"
 )
 
 func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot, m *etcdutil.Member, ms etcdutil.MemberSet) ([]core.Container, error) {
@@ -35,7 +34,7 @@ func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot,
 			snapshotSource.Name,
 		)
 	}
-	containers := []core.Container{}
+	var containers []core.Container
 
 	namespace := snapshotSource.Namespace
 	if namespace == "" {
@@ -51,10 +50,10 @@ func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot,
 	folderName, _ := snapshot.Location()
 
 	containers = append(containers, core.Container{
-		Name:  snapshotProcessRestore,
+		Name:  api.JobTypeRestore,
 		Image: c.docker.GetToolsImageWithTag(etcd),
 		Args: []string{
-			snapshotProcessRestore,
+			api.JobTypeRestore,
 			fmt.Sprintf(`--host=%s`, endpoints),
 			fmt.Sprintf(`--data-dir=%s`, snapshotDumpDir),
 			fmt.Sprintf(`--bucket=%s`, bucket),
@@ -68,7 +67,7 @@ func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot,
 				Value: c.AnalyticsClientID,
 			},
 		},
-		Resources: snapshot.Spec.Resources,
+		Resources: snapshot.Spec.PodTemplate.Spec.Resources,
 		VolumeMounts: []core.VolumeMount{
 			{
 				Name:      "data",
@@ -94,7 +93,7 @@ func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot,
 				" --initial-advertise-peer-urls %[4]s"+
 				" --data-dir %[6]s 2>/dev/termination-log", filepath.Join(snapshotDumpDir, snapshot.Name), m.Name, strings.Join(ms.PeerURLPairs(), ","), m.PeerURL(), etcd.Name, dataDir),
 		},
-		Resources: snapshot.Spec.Resources,
+		Resources: snapshot.Spec.PodTemplate.Spec.Resources,
 		VolumeMounts: []core.VolumeMount{
 			{
 				Name:      "data",
@@ -109,19 +108,22 @@ func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot,
 
 func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, error) {
 	databaseName := snapshot.Spec.DatabaseName
-	jobName := fmt.Sprintf("%s-%s", api.DatabaseNamePrefix, snapshot.OffshootName())
-	jobLabel := map[string]string{
-		api.LabelDatabaseKind: api.ResourceKindEtcd,
-	}
-	jobAnnotation := map[string]string{
-		api.AnnotationJobType: api.JobTypeBackup,
-	}
-	backupSpec := snapshot.Spec.Backend
-	bucket, err := backupSpec.Container()
+
+	etcd, err := c.etcdLister.Etcds(snapshot.Namespace).Get(databaseName)
 	if err != nil {
 		return nil, err
 	}
-	etcd, err := c.etcdLister.Etcds(snapshot.Namespace).Get(databaseName)
+
+	jobName := fmt.Sprintf("%s-%s", api.DatabaseNamePrefix, snapshot.OffshootName())
+	jobLabel := etcd.OffshootLabels()
+	if jobLabel == nil {
+		jobLabel = map[string]string{}
+	}
+	jobLabel[api.LabelDatabaseKind] = api.ResourceKindEtcd
+	jobLabel[api.AnnotationJobType] = api.JobTypeBackup
+
+	backupSpec := snapshot.Spec.Backend
+	bucket, err := backupSpec.Container()
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +142,7 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        jobName,
 			Labels:      jobLabel,
-			Annotations: jobAnnotation,
+			Annotations: snapshot.Spec.PodTemplate.Controller.Annotations,
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: api.SchemeGroupVersion.String(),
@@ -153,17 +155,17 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 		Spec: batch.JobSpec{
 			Template: core.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: jobLabel,
+					Annotations: snapshot.Spec.PodTemplate.Annotations,
 				},
 				Spec: core.PodSpec{
 					Containers: []core.Container{
 						{
-							Name:  snapshotProcessBackup,
+							Name:  api.JobTypeBackup,
 							Image: c.docker.GetToolsImageWithTag(etcd),
 							Args: []string{
-								snapshotProcessBackup,
+								api.JobTypeBackup,
 								fmt.Sprintf(`--host=%s`, endpoints),
-								//fmt.Sprintf(`--user=%s`, etcdUser),
+								// fmt.Sprintf(`--user=%s`, etcdUser),
 								fmt.Sprintf(`--data-dir=%s`, snapshotDumpDir),
 								fmt.Sprintf(`--bucket=%s`, bucket),
 								fmt.Sprintf(`--folder=%s`, folderName),
@@ -176,7 +178,7 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 									Value: c.AnalyticsClientID,
 								},
 							},
-							Resources: snapshot.Spec.Resources,
+							Resources: snapshot.Spec.PodTemplate.Spec.Resources,
 							VolumeMounts: []core.VolumeMount{
 								{
 									Name:      persistentVolume.Name,
@@ -190,7 +192,6 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 							},
 						},
 					},
-					ImagePullSecrets: snapshot.Spec.PodTemplate.Spec.ImagePullSecrets,
 					Volumes: []core.Volume{
 						{
 							Name:         persistentVolume.Name,
@@ -205,7 +206,18 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 							},
 						},
 					},
-					RestartPolicy: core.RestartPolicyNever,
+					RestartPolicy:     core.RestartPolicyNever,
+					NodeSelector:      snapshot.Spec.PodTemplate.Spec.NodeSelector,
+					Affinity:          snapshot.Spec.PodTemplate.Spec.Affinity,
+					SchedulerName:     snapshot.Spec.PodTemplate.Spec.SchedulerName,
+					Tolerations:       snapshot.Spec.PodTemplate.Spec.Tolerations,
+					PriorityClassName: snapshot.Spec.PodTemplate.Spec.PriorityClassName,
+					Priority:          snapshot.Spec.PodTemplate.Spec.Priority,
+					SecurityContext:   snapshot.Spec.PodTemplate.Spec.SecurityContext,
+					ImagePullSecrets: core_util.MergeLocalObjectReferences(
+						snapshot.Spec.PodTemplate.Spec.ImagePullSecrets,
+						etcd.Spec.PodTemplate.Spec.ImagePullSecrets,
+					),
 				},
 			},
 		},

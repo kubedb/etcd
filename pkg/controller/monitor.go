@@ -33,7 +33,7 @@ func (c *Controller) addOrUpdateMonitor(etcd *api.Etcd) (kutil.VerbType, error) 
 	if err != nil {
 		return kutil.VerbUnchanged, err
 	}
-	return agent.CreateOrUpdate(etcd.StatsAccessor(), etcd.Spec.Monitor)
+	return agent.CreateOrUpdate(etcd.StatsService(), etcd.Spec.Monitor)
 }
 
 func (c *Controller) deleteMonitor(etcd *api.Etcd) (kutil.VerbType, error) {
@@ -41,11 +41,11 @@ func (c *Controller) deleteMonitor(etcd *api.Etcd) (kutil.VerbType, error) {
 	if err != nil {
 		return kutil.VerbUnchanged, err
 	}
-	return agent.Delete(etcd.StatsAccessor())
+	return agent.Delete(etcd.StatsService())
 }
 
 func (c *Controller) getOldAgent(etcd *api.Etcd) mona.Agent {
-	service, err := c.Client.CoreV1().Services(etcd.Namespace).Get(etcd.StatsAccessor().ServiceName(), metav1.GetOptions{})
+	service, err := c.Client.CoreV1().Services(etcd.Namespace).Get(etcd.StatsService().ServiceName(), metav1.GetOptions{})
 	if err != nil {
 		return nil
 	}
@@ -54,7 +54,7 @@ func (c *Controller) getOldAgent(etcd *api.Etcd) mona.Agent {
 }
 
 func (c *Controller) setNewAgent(etcd *api.Etcd) error {
-	service, err := c.Client.CoreV1().Services(etcd.Namespace).Get(etcd.StatsAccessor().ServiceName(), metav1.GetOptions{})
+	service, err := c.Client.CoreV1().Services(etcd.Namespace).Get(etcd.StatsService().ServiceName(), metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (c *Controller) manageMonitor(etcd *api.Etcd) error {
 	if etcd.Spec.Monitor != nil {
 		if oldAgent != nil &&
 			oldAgent.GetType() != etcd.Spec.Monitor.Agent {
-			if _, err := oldAgent.Delete(etcd.StatsAccessor()); err != nil {
+			if _, err := oldAgent.Delete(etcd.StatsService()); err != nil {
 				log.Error("error in deleting Prometheus agent:", err)
 			}
 		}
@@ -82,7 +82,7 @@ func (c *Controller) manageMonitor(etcd *api.Etcd) error {
 		}
 		return c.setNewAgent(etcd)
 	} else if oldAgent != nil {
-		if _, err := oldAgent.Delete(etcd.StatsAccessor()); err != nil {
+		if _, err := oldAgent.Delete(etcd.StatsService()); err != nil {
 			log.Error("error in deleting Prometheus agent:", err)
 		}
 	}

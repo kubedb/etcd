@@ -35,7 +35,7 @@ func setNameSchema(openapiSpec map[string]common.OpenAPIDefinition) {
 
 func filterTags(out, in map[string]string) map[string]string {
 	if in == nil {
-		return nil
+		return out
 	}
 	if out == nil {
 		out = make(map[string]string, len(in))
@@ -55,4 +55,14 @@ func filterTags(out, in map[string]string) map[string]string {
 		}
 	}
 	return out
+}
+
+func (e *BackupScheduleSpec) Migrate() {
+	if e == nil {
+		return
+	}
+	if e.Resources != nil {
+		e.PodTemplate.Spec.Resources = *e.Resources
+		e.Resources = nil
+	}
 }
