@@ -112,7 +112,7 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		c.Client,
 		etcd.Namespace,
 		&metav1.LabelSelector{
-			MatchLabels: etcd.StatefulSetLabels(),
+			MatchLabels: etcd.OffshootLabels(),
 		},
 		int(types.Int32(etcd.Spec.Replicas)),
 	); err != nil {

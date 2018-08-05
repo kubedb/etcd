@@ -291,7 +291,7 @@ func isSpecEqual(s1, s2 api.EtcdSpec) bool {
 }
 func (c *Controller) pollPods(cl *Cluster) (running, pending []*v1.Pod, err error) {
 	podList, err := c.Controller.Client.Core().Pods(cl.cluster.Namespace).List(metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(cl.cluster.StatefulSetLabels()).String(),
+		LabelSelector: labels.SelectorFromSet(cl.cluster.OffshootLabels()).String(),
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to list running pods: %v", err)
