@@ -42,28 +42,40 @@ func (e Elasticsearch) ResourcePlural() string {
 	return ResourcePluralElasticsearch
 }
 
-func (r Elasticsearch) ServiceName() string {
-	return r.OffshootName()
+func (e Elasticsearch) ServiceName() string {
+	return e.OffshootName()
 }
 
-func (r *Elasticsearch) MasterServiceName() string {
-	return fmt.Sprintf("%v-master", r.ServiceName())
+func (e *Elasticsearch) MasterServiceName() string {
+	return fmt.Sprintf("%v-master", e.ServiceName())
 }
 
-func (r Elasticsearch) ServiceMonitorName() string {
-	return fmt.Sprintf("kubedb-%s-%s", r.Namespace, r.Name)
+type elasticsearchStatsService struct {
+	*Elasticsearch
 }
 
-func (r Elasticsearch) Path() string {
-	return fmt.Sprintf("/kubedb.com/v1alpha1/namespaces/%s/%s/%s/metrics", r.Namespace, r.ResourcePlural(), r.Name)
+func (e elasticsearchStatsService) GetNamespace() string {
+	return e.Elasticsearch.GetNamespace()
 }
 
-func (r Elasticsearch) Scheme() string {
+func (e elasticsearchStatsService) ServiceName() string {
+	return e.OffshootName() + "-stats"
+}
+
+func (e elasticsearchStatsService) ServiceMonitorName() string {
+	return fmt.Sprintf("kubedb-%s-%s", e.Namespace, e.Name)
+}
+
+func (e elasticsearchStatsService) Path() string {
+	return fmt.Sprintf("/kubedb.com/v1alpha1/namespaces/%s/%s/%s/metrics", e.Namespace, e.ResourcePlural(), e.Name)
+}
+
+func (e elasticsearchStatsService) Scheme() string {
 	return ""
 }
 
-func (r *Elasticsearch) StatsAccessor() mona.StatsAccessor {
-	return r
+func (e Elasticsearch) StatsService() mona.StatsAccessor {
+	return &elasticsearchStatsService{&e}
 }
 
 func (e *Elasticsearch) GetMonitoringVendor() string {
@@ -73,13 +85,14 @@ func (e *Elasticsearch) GetMonitoringVendor() string {
 	return ""
 }
 
-func (r Elasticsearch) CustomResourceDefinition() *apiextensions.CustomResourceDefinition {
+func (e Elasticsearch) CustomResourceDefinition() *apiextensions.CustomResourceDefinition {
 	return crdutils.NewCustomResourceDefinition(crdutils.Config{
 		Group:         SchemeGroupVersion.Group,
 		Plural:        ResourcePluralElasticsearch,
 		Singular:      ResourceSingularElasticsearch,
 		Kind:          ResourceKindElasticsearch,
 		ShortNames:    []string{ResourceCodeElasticsearch},
+		Categories:    []string{"datastore", "kubedb", "appscode"},
 		ResourceScope: string(apiextensions.NamespaceScoped),
 		Versions: []apiextensions.CustomResourceDefinitionVersion{
 			{
@@ -115,11 +128,49 @@ func (r Elasticsearch) CustomResourceDefinition() *apiextensions.CustomResourceD
 	}, setNameSchema)
 }
 
+func (e *Elasticsearch) Migrate() {
+	if e == nil {
+		return
+	}
+	e.Spec.Migrate()
+}
+
+func (e *ElasticsearchSpec) Migrate() {
+	if e == nil {
+		return
+	}
+	e.BackupSchedule.Migrate()
+	if len(e.NodeSelector) > 0 {
+		e.PodTemplate.Spec.NodeSelector = e.NodeSelector
+		e.NodeSelector = nil
+	}
+	if e.Resources != nil {
+		e.PodTemplate.Spec.Resources = *e.Resources
+		e.Resources = nil
+	}
+	if e.Affinity != nil {
+		e.PodTemplate.Spec.Affinity = e.Affinity
+		e.Affinity = nil
+	}
+	if len(e.SchedulerName) > 0 {
+		e.PodTemplate.Spec.SchedulerName = e.SchedulerName
+		e.SchedulerName = ""
+	}
+	if len(e.Tolerations) > 0 {
+		e.PodTemplate.Spec.Tolerations = e.Tolerations
+		e.Tolerations = nil
+	}
+	if len(e.ImagePullSecrets) > 0 {
+		e.PodTemplate.Spec.ImagePullSecrets = e.ImagePullSecrets
+		e.ImagePullSecrets = nil
+	}
+}
+
 const (
 	ESSearchGuardDisabled = ElasticsearchKey + "/searchguard-disabled"
 )
 
-func (r Elasticsearch) SearchGuardDisabled() bool {
-	v, _ := meta.GetBoolValue(r.Annotations, ESSearchGuardDisabled)
+func (e Elasticsearch) SearchGuardDisabled() bool {
+	v, _ := meta.GetBoolValue(e.Annotations, ESSearchGuardDisabled)
 	return v
 }

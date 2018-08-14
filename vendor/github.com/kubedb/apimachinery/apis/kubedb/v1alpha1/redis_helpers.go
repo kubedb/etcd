@@ -43,20 +43,32 @@ func (r Redis) ServiceName() string {
 	return r.OffshootName()
 }
 
-func (r Redis) ServiceMonitorName() string {
+type redisStatsService struct {
+	*Redis
+}
+
+func (r redisStatsService) GetNamespace() string {
+	return r.Redis.GetNamespace()
+}
+
+func (r redisStatsService) ServiceName() string {
+	return r.OffshootName() + "-stats"
+}
+
+func (r redisStatsService) ServiceMonitorName() string {
 	return fmt.Sprintf("kubedb-%s-%s", r.Namespace, r.Name)
 }
 
-func (r Redis) Path() string {
+func (r redisStatsService) Path() string {
 	return fmt.Sprintf("/kubedb.com/v1alpha1/namespaces/%s/%s/%s/metrics", r.Namespace, r.ResourcePlural(), r.Name)
 }
 
-func (r Redis) Scheme() string {
+func (r redisStatsService) Scheme() string {
 	return ""
 }
 
-func (r *Redis) StatsAccessor() mona.StatsAccessor {
-	return r
+func (r Redis) StatsService() mona.StatsAccessor {
+	return &redisStatsService{&r}
 }
 
 func (r *Redis) GetMonitoringVendor() string {
@@ -73,6 +85,7 @@ func (r Redis) CustomResourceDefinition() *apiextensions.CustomResourceDefinitio
 		Singular:      ResourceSingularRedis,
 		Kind:          ResourceKindRedis,
 		ShortNames:    []string{ResourceCodeRedis},
+		Categories:    []string{"datastore", "kubedb", "appscode"},
 		ResourceScope: string(apiextensions.NamespaceScoped),
 		Versions: []apiextensions.CustomResourceDefinitionVersion{
 			{
@@ -106,4 +119,41 @@ func (r Redis) CustomResourceDefinition() *apiextensions.CustomResourceDefinitio
 			},
 		},
 	}, setNameSchema)
+}
+
+func (r *Redis) Migrate() {
+	if r == nil {
+		return
+	}
+	r.Spec.Migrate()
+}
+
+func (r *RedisSpec) Migrate() {
+	if r == nil {
+		return
+	}
+	if len(r.NodeSelector) > 0 {
+		r.PodTemplate.Spec.NodeSelector = r.NodeSelector
+		r.NodeSelector = nil
+	}
+	if r.Resources != nil {
+		r.PodTemplate.Spec.Resources = *r.Resources
+		r.Resources = nil
+	}
+	if r.Affinity != nil {
+		r.PodTemplate.Spec.Affinity = r.Affinity
+		r.Affinity = nil
+	}
+	if len(r.SchedulerName) > 0 {
+		r.PodTemplate.Spec.SchedulerName = r.SchedulerName
+		r.SchedulerName = ""
+	}
+	if len(r.Tolerations) > 0 {
+		r.PodTemplate.Spec.Tolerations = r.Tolerations
+		r.Tolerations = nil
+	}
+	if len(r.ImagePullSecrets) > 0 {
+		r.PodTemplate.Spec.ImagePullSecrets = r.ImagePullSecrets
+		r.ImagePullSecrets = nil
+	}
 }

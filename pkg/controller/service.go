@@ -76,7 +76,9 @@ func createService(kubecli kubernetes.Interface, svcName, ns, clusterIP string, 
 		in.Spec.LoadBalancerIP = etcd.Spec.ServiceTemplate.Spec.LoadBalancerIP
 		in.Spec.LoadBalancerSourceRanges = etcd.Spec.ServiceTemplate.Spec.LoadBalancerSourceRanges
 		in.Spec.ExternalTrafficPolicy = etcd.Spec.ServiceTemplate.Spec.ExternalTrafficPolicy
-		in.Spec.HealthCheckNodePort = etcd.Spec.ServiceTemplate.Spec.HealthCheckNodePort
+		if etcd.Spec.ServiceTemplate.Spec.HealthCheckNodePort > 0 {
+			in.Spec.HealthCheckNodePort = etcd.Spec.ServiceTemplate.Spec.HealthCheckNodePort
+		}
 		return in
 	})
 	return err

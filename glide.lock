@@ -1,5 +1,5 @@
 hash: 4976eba8b78b57c15918c915c9af4c50d2ad2c3e56b25e8cdb618bf911b32acb
-updated: 2018-08-04T22:02:56.435945511-07:00
+updated: 2018-08-14T15:24:45.119477975-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -33,7 +33,7 @@ imports:
   - admission/v1beta1
   - registry/admissionreview/v1beta1
 - name: github.com/appscode/kutil
-  version: 1a2537b112744aaeeba58b5fe81973eced880ff8
+  version: 266e2ad77d953e86893aa1abba587d3f29bbdc92
   subpackages:
   - apiextensions/v1beta1
   - core/v1
@@ -226,7 +226,7 @@ imports:
 - name: github.com/evanphx/json-patch
   version: afac545df32f2287a079e2dfb7ba2745a643747e
 - name: github.com/ghodss/yaml
-  version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
+  version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-bongo/bongo
   version: 58e3a1fbb5ea15dde8675b60becb2a9950e70164
 - name: github.com/go-ini/ini
@@ -323,7 +323,7 @@ imports:
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/kubedb/apimachinery
-  version: 32555e39c123a6a552485f0bd9051aeecbaa6caf
+  version: ef7609306b7c14c6e3198b81b158c1173ce5700e
   subpackages:
   - apis/kubedb
   - apis/kubedb/v1alpha1
@@ -366,7 +366,7 @@ imports:
 - name: github.com/modern-go/reflect2
   version: 05fbef0ca5da472bbf96c9322b84a53edc03c9fd
 - name: github.com/ncw/swift
-  version: b2a7479cf26fa841ff90dd932d0221cb5c50782d
+  version: bd8b704d15b2f5357186ac39c863bd74eb837291
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/oleiade/reflections
@@ -532,7 +532,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/api
-  version: f6d94689cbd71030af1108ddac733886fcae1d75
+  version: 0e8d13b5c025da6a7cf249bb854e5869921dd459
   subpackages:
   - gensupport
   - googleapi
@@ -980,7 +980,7 @@ imports:
   - api/v1
   - osm
 - name: kmodules.xyz/offshoot-api
-  version: daec3814cefd06bcb6ca0611ce28df8b92337d8c
+  version: 71dd2bafc0a452e3eb2d5bc60b2786d1f1843a51
   repo: https://github.com/kmodules/offshoot-api.git
   vcs: git
   subpackages:
