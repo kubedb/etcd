@@ -38,7 +38,13 @@ func TestEtcdValidator_Admit(t *testing.T) {
 			validator := EtcdValidator{}
 
 			validator.initialized = true
-			validator.extClient = extFake.NewSimpleClientset()
+			validator.extClient = extFake.NewSimpleClientset(
+				&api.EtcdVersion{
+					ObjectMeta: metaV1.ObjectMeta{
+						Name: "3.2.13",
+					},
+				},
+			)
 			validator.client = fake.NewSimpleClientset(
 				&core.Secret{
 					ObjectMeta: metaV1.ObjectMeta{

@@ -22,11 +22,7 @@ func (c *Controller) CreateClientService(cl *Cluster) error {
 		Protocol:   v1.ProtocolTCP,
 	}}
 
-	return createService(c.Controller.Client, ClientServiceName(cl.cluster.Name), cl.cluster.Namespace, "", ports, cl.cluster)
-}
-
-func ClientServiceName(clusterName string) string {
-	return clusterName + "-client"
+	return createService(c.Controller.Client, cl.cluster.ClientServiceName(), "", ports, cl.cluster)
 }
 
 func (c *Controller) CreatePeerService(cl *Cluster) error {
@@ -42,10 +38,10 @@ func (c *Controller) CreatePeerService(cl *Cluster) error {
 		Protocol:   v1.ProtocolTCP,
 	}}
 
-	return createService(c.Controller.Client, cl.cluster.Name, cl.cluster.Namespace, v1.ClusterIPNone, ports, cl.cluster)
+	return createService(c.Controller.Client, cl.cluster.PeerServiceName(), v1.ClusterIPNone, ports, cl.cluster)
 }
 
-func createService(kubecli kubernetes.Interface, svcName, ns, clusterIP string, ports []v1.ServicePort, etcd *api.Etcd) error {
+func createService(kubecli kubernetes.Interface, svcName, clusterIP string, ports []v1.ServicePort, etcd *api.Etcd) error {
 	meta := metav1.ObjectMeta{
 		Name:      svcName,
 		Namespace: etcd.Namespace,

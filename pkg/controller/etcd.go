@@ -129,13 +129,10 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		})
 	}
 
-	fmt.Println("running...........><>>>>>>>>>>><>>>>>>>>>>>>>>>")
-
 	ms, _, err := util.PatchEtcd(c.ExtClient, etcd, func(in *api.Etcd) *api.Etcd {
 		in.Status.Phase = api.DatabasePhaseRunning
 		return in
 	})
-	fmt.Println(err, ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,")
 
 	if err != nil {
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
