@@ -150,6 +150,21 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 	// Ensure Schedule backup
 	c.ensureBackupScheduler(etcd)
 
+	// ensure StatsService for desired monitoring
+	if _, err := c.ensureStatsService(etcd); err != nil {
+		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
+			c.recorder.Eventf(
+				ref,
+				core.EventTypeWarning,
+				eventer.EventReasonFailedToCreate,
+				"Failed to manage monitoring system. Reason: %v",
+				err,
+			)
+		}
+		log.Errorln(err)
+		return nil
+	}
+
 	if err := c.manageMonitor(etcd); err != nil {
 		if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
 			c.recorder.Eventf(
