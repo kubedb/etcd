@@ -135,7 +135,7 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 	}
 
 	// Get PersistentVolume object for Backup Util pod.
-	persistentVolume, err := c.getVolumeForSnapshot(etcd.Spec.Storage, jobName, snapshot.Namespace)
+	persistentVolume, err := c.getVolumeForSnapshot(etcd.Spec.StorageType, etcd.Spec.Storage, jobName, snapshot.Namespace)
 	if err != nil {
 		return nil, err
 	}
