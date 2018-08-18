@@ -372,6 +372,7 @@ func (c *Controller) updateCRStatus(cl *Cluster) error {
 	}
 	_, err := dbutil.UpdateEtcdStatus(c.Controller.ExtClient, cl.cluster, func(in *api.EtcdStatus) *api.EtcdStatus {
 		in.Phase = cl.status.Phase
+		in.ObservedGeneration = cl.cluster.Generation
 		return in
 	})
 	return err

@@ -3,7 +3,6 @@ package controller
 import (
 	"github.com/appscode/go/log"
 	core_util "github.com/appscode/kutil/core/v1"
-	meta_util "github.com/appscode/kutil/meta"
 	"github.com/appscode/kutil/tools/queue"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
@@ -17,22 +16,8 @@ func (c *Controller) initWatcher() {
 	c.etcdInformer.AddEventHandler(queue.NewEventHandler(c.etcdQueue.GetQueue(), func(old interface{}, new interface{}) bool {
 		oldObj := old.(*api.Etcd)
 		newObj := new.(*api.Etcd)
-		return newObj.DeletionTimestamp != nil || !etcdEqual(oldObj, newObj)
+		return newObj.DeletionTimestamp != nil || !newObj.AlreadyObserved(oldObj)
 	}))
-}
-
-func etcdEqual(old, new *api.Etcd) bool {
-	if !meta_util.Equal(old.Spec, new.Spec) {
-		diff := meta_util.Diff(old.Spec, new.Spec)
-		log.Infof("Etcd %s/%s has changed. Diff: %s", new.Namespace, new.Name, diff)
-		return false
-	}
-	if !meta_util.Equal(old.Annotations, new.Annotations) {
-		diff := meta_util.Diff(old.Annotations, new.Annotations)
-		log.Infof("Annotations in Etcd %s/%s has changed. Diff: %s", new.Namespace, new.Name, diff)
-		return false
-	}
-	return true
 }
 
 func (c *Controller) runEtcd(key string) error {

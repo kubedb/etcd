@@ -131,6 +131,7 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 
 	db, err := util.UpdateEtcdStatus(c.ExtClient, etcd, func(in *api.EtcdStatus) *api.EtcdStatus {
 		in.Phase = api.DatabasePhaseRunning
+		in.ObservedGeneration = etcd.Generation
 		return in
 	})
 
