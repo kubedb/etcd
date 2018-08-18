@@ -132,7 +132,7 @@ func ValidateEtcd(client kubernetes.Interface, extClient kubedbv1alpha1.KubedbV1
 
 	if etcd.Spec.Storage != nil {
 		var err error
-		if err = amv.ValidateStorage(client, *etcd.Spec.Storage); err != nil {
+		if err = amv.ValidateStorage(client, etcd.Spec.StorageType, etcd.Spec.Storage); err != nil {
 			return err
 		}
 	}

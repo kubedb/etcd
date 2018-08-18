@@ -6,6 +6,7 @@ import (
 
 	"github.com/appscode/kutil/meta"
 	prom "github.com/coreos/prometheus-operator/pkg/client/monitoring/v1"
+	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	cs "github.com/kubedb/apimachinery/client/clientset/versioned"
 	kubedbinformers "github.com/kubedb/apimachinery/client/informers/externalversions"
 	snapc "github.com/kubedb/apimachinery/pkg/controller/snapshot"
@@ -15,7 +16,6 @@ import (
 	kext_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 )
 
 type ExtraOptions struct {
