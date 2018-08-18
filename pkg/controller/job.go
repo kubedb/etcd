@@ -23,6 +23,10 @@ const (
 )
 
 func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot, m *etcdutil.Member, ms etcdutil.MemberSet) ([]core.Container, error) {
+	etcdVersion, err := c.ExtClient.EtcdVersions().Get(string(etcd.Spec.Version), metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
 	snapshotSource := etcd.Spec.Init.SnapshotSource
 	// Event for notification that kubernetes objects are creating
 	if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
@@ -41,7 +45,7 @@ func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot,
 		namespace = etcd.Namespace
 	}
 
-	endpoints := fmt.Sprintf("%s.%s", ClientServiceName(etcd.Name), etcd.Namespace)
+	endpoints := fmt.Sprintf("%s.%s", etcd.ClientServiceName(), etcd.Namespace)
 	backupSpec := snapshot.Spec.Backend
 	bucket, err := backupSpec.Container()
 	if err != nil {
@@ -51,7 +55,7 @@ func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot,
 
 	containers = append(containers, core.Container{
 		Name:  api.JobTypeRestore,
-		Image: c.docker.GetToolsImageWithTag(etcd),
+		Image: etcdVersion.Spec.DB.Image,
 		Args: []string{
 			api.JobTypeRestore,
 			fmt.Sprintf(`--host=%s`, endpoints),
@@ -83,7 +87,7 @@ func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot,
 
 	containers = append(containers, core.Container{
 		Name:  "restore-datadir",
-		Image: c.docker.GetToolsImageWithTag(etcd),
+		Image: etcdVersion.Spec.DB.Image,
 		Command: []string{
 			"/bin/sh", "-ec",
 			fmt.Sprintf("ETCDCTL_API=3 etcdctl snapshot restore %[1]s"+
@@ -101,15 +105,16 @@ func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot,
 			},
 		},
 	})
-	fmt.Println(containers)
 
 	return containers, nil
 }
 
 func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, error) {
-	databaseName := snapshot.Spec.DatabaseName
-
-	etcd, err := c.etcdLister.Etcds(snapshot.Namespace).Get(databaseName)
+	etcd, err := c.etcdLister.Etcds(snapshot.Namespace).Get(snapshot.Spec.DatabaseName)
+	if err != nil {
+		return nil, err
+	}
+	etcdVersion, err := c.ExtClient.EtcdVersions().Get(string(etcd.Spec.Version), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +139,8 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 		return nil, err
 	}
 
-	endpoints := fmt.Sprintf("%s.%s", ClientServiceName(etcd.Name), etcd.Namespace)
+	endpoints := fmt.Sprintf("%s.%s", etcd.ClientServiceName(), etcd.Namespace)
+
 	// Folder name inside Cloud bucket where backup will be uploaded
 	folderName, _ := snapshot.Location()
 
@@ -161,7 +167,7 @@ func (c *Controller) getSnapshotterJob(snapshot *api.Snapshot) (*batch.Job, erro
 					Containers: []core.Container{
 						{
 							Name:  api.JobTypeBackup,
-							Image: c.docker.GetToolsImageWithTag(etcd),
+							Image: etcdVersion.Spec.Tools.Image,
 							Args: []string{
 								api.JobTypeBackup,
 								fmt.Sprintf(`--host=%s`, endpoints),

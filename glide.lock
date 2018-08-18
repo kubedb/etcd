@@ -1,5 +1,5 @@
 hash: 4976eba8b78b57c15918c915c9af4c50d2ad2c3e56b25e8cdb618bf911b32acb
-updated: 2018-08-14T15:24:45.119477975-07:00
+updated: 2018-08-18T05:58:06.359525876-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -33,7 +33,7 @@ imports:
   - admission/v1beta1
   - registry/admissionreview/v1beta1
 - name: github.com/appscode/kutil
-  version: 266e2ad77d953e86893aa1abba587d3f29bbdc92
+  version: 55817b7c4b57c117d9779249b3924a866b644fbb
   subpackages:
   - apiextensions/v1beta1
   - core/v1
@@ -202,7 +202,7 @@ imports:
   subpackages:
   - pkg/client/monitoring/v1
 - name: github.com/cpuguy83/go-md2man
-  version: 71acacd42f85e5e82f70a55327789582a5200a90
+  version: 20f5889cbdc3c73dbd2862796665e7c465ade7d1
   subpackages:
   - md2man
 - name: github.com/davecgh/go-spew
@@ -236,7 +236,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 1de3e0542de65ad8d75452a595886fdd0befb363
+  version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
   version: f3f9494671f93fcff853e3c6e9e948b3eb71e590
 - name: github.com/gogo/protobuf
@@ -281,7 +281,7 @@ imports:
   - compiler
   - extensions
 - name: github.com/graymeta/stow
-  version: 749bd5039731d827684b5d49a59b01d4c5316b65
+  version: afce6d90444a3ba63c6d6671498c6cdc79375369
   repo: https://github.com/appscode/stow.git
   vcs: git
   subpackages:
@@ -303,7 +303,7 @@ imports:
   - runtime/internal
   - utilities
 - name: github.com/hashicorp/go-version
-  version: fb6d4d97f77e338e49c50a317327a85e215f8269
+  version: 0dcf3ac121c7c30e035b41ba9f652d1ce5994242
   repo: https://github.com/appscode/go-version.git
   vcs: git
 - name: github.com/hashicorp/golang-lru
@@ -323,7 +323,7 @@ imports:
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/kubedb/apimachinery
-  version: ef7609306b7c14c6e3198b81b158c1173ce5700e
+  version: 2eee45f2c9c0edc1b631998b36d065a9650db87b
   subpackages:
   - apis/kubedb
   - apis/kubedb/v1alpha1
@@ -446,11 +446,12 @@ imports:
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/sergi/go-diff
-  version: 97b2266dfe4bd4ea1b81a463322f04f8b724801e
+  version: 24e2351369ec4949b2ed0dc5c477afdd4c4034e8
+  repo: https://github.com/sergi/go-diff
   subpackages:
   - diffmatchpatch
 - name: github.com/sirupsen/logrus
-  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/spf13/cobra
   version: ef82de70bb3f60c65fb8eebacbb2d122ef517385
   subpackages:
@@ -464,11 +465,12 @@ imports:
 - name: github.com/xiang90/probing
   version: 07dd2e8dfe18522e9c447ba95f2fe95262f63bb2
 - name: github.com/yudai/gojsondiff
-  version: 7b1b7adf999dab73a6eb02669c3d82dbb27a3dd6
+  version: 0525c875b75ca60b9e67ddc44496aa16f21066b0
   subpackages:
   - formatter
 - name: github.com/yudai/golcs
   version: d1c525dea8ce39ea9a783d33cf08932305373f2c
+  repo: https://github.com/yudai/golcs
 - name: golang.org/x/crypto
   version: 49796115aa4b964c318aad4f3084fdb41e9aa067
   subpackages:
@@ -532,7 +534,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/api
-  version: 0e8d13b5c025da6a7cf249bb854e5869921dd459
+  version: e21acd801f91da814261b938941d193bb036441a
   subpackages:
   - gensupport
   - googleapi
@@ -690,7 +692,7 @@ imports:
   - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: bf4767929ee604e8b2a6ca0322c2b6f12fd6c912
+  version: 413d6c435277570ff1866384c518002dcf3bf8e1
   repo: https://github.com/pharmer/apiserver.git
   vcs: git
   subpackages:
@@ -973,14 +975,14 @@ imports:
   - agents/prometheusbuiltin
   - api/v1
 - name: kmodules.xyz/objectstore-api
-  version: 5437829d6e1c97de1c3effe5f2dc6cbca2e0bfd4
+  version: 94d68f0dfad22b23d98d8461344ebabc1f8a4a7c
   repo: https://github.com/kmodules/objectstore-api.git
   vcs: git
   subpackages:
   - api/v1
   - osm
 - name: kmodules.xyz/offshoot-api
-  version: 71dd2bafc0a452e3eb2d5bc60b2786d1f1843a51
+  version: 5ff9de954aeb2148edc7a831671f3f875aa56f30
   repo: https://github.com/kmodules/offshoot-api.git
   vcs: git
   subpackages:

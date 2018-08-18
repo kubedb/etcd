@@ -59,6 +59,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.EtcdVersionExporter":          schema_apimachinery_apis_kubedb_v1alpha1_EtcdVersionExporter(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.EtcdVersionList":              schema_apimachinery_apis_kubedb_v1alpha1_EtcdVersionList(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.EtcdVersionSpec":              schema_apimachinery_apis_kubedb_v1alpha1_EtcdVersionSpec(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.EtcdVersionTools":             schema_apimachinery_apis_kubedb_v1alpha1_EtcdVersionTools(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.InitSpec":                     schema_apimachinery_apis_kubedb_v1alpha1_InitSpec(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MemberSecret":                 schema_apimachinery_apis_kubedb_v1alpha1_MemberSecret(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.Memcached":                    schema_apimachinery_apis_kubedb_v1alpha1_Memcached(ref),
@@ -72,6 +73,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MemcachedVersionSpec":         schema_apimachinery_apis_kubedb_v1alpha1_MemcachedVersionSpec(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MongoDB":                      schema_apimachinery_apis_kubedb_v1alpha1_MongoDB(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MongoDBList":                  schema_apimachinery_apis_kubedb_v1alpha1_MongoDBList(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MongoDBReplicaSet":            schema_apimachinery_apis_kubedb_v1alpha1_MongoDBReplicaSet(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MongoDBSpec":                  schema_apimachinery_apis_kubedb_v1alpha1_MongoDBSpec(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MongoDBStatus":                schema_apimachinery_apis_kubedb_v1alpha1_MongoDBStatus(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MongoDBVersion":               schema_apimachinery_apis_kubedb_v1alpha1_MongoDBVersion(ref),
@@ -574,11 +576,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_DormantDatabaseStatus(ref common.R
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"creationTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
 					"pausingTime": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
@@ -764,7 +761,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ElasticsearchNode(ref common.Refer
 						},
 					},
 				},
-				Required: []string{"storage"},
 			},
 		},
 		Dependencies: []string{
@@ -814,6 +810,13 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ElasticsearchSpec(ref common.Refer
 						SchemaProps: spec.SchemaProps{
 							Description: "Database authentication secret",
 							Ref:         ref("k8s.io/api/core/v1.SecretVolumeSource"),
+						},
+					},
+					"storageType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StorageType can be durable (default) or ephemeral",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"storage": {
@@ -938,11 +941,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ElasticsearchStatus(ref common.Ref
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"creationTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
 					"phase": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -965,8 +963,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ElasticsearchStatus(ref common.Ref
 				},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+		Dependencies: []string{},
 	}
 }
 
@@ -1300,6 +1297,13 @@ func schema_apimachinery_apis_kubedb_v1alpha1_EtcdSpec(ref common.ReferenceCallb
 							Format:      "int32",
 						},
 					},
+					"storageType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StorageType can be durable (default) or ephemeral",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"storage": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Storage spec to specify how storage shall be used.",
@@ -1369,11 +1373,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_EtcdStatus(ref common.ReferenceCal
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"creationTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
 					"phase": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -1396,8 +1395,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_EtcdStatus(ref common.ReferenceCal
 				},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+		Dependencies: []string{},
 	}
 }
 
@@ -1550,12 +1548,38 @@ func schema_apimachinery_apis_kubedb_v1alpha1_EtcdVersionSpec(ref common.Referen
 							Ref:         ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.EtcdVersionExporter"),
 						},
 					},
+					"tools": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tools Image",
+							Ref:         ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.EtcdVersionTools"),
+						},
+					},
 				},
-				Required: []string{"db", "exporter"},
+				Required: []string{"db", "exporter", "tools"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.EtcdVersionDatabase", "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.EtcdVersionExporter"},
+			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.EtcdVersionDatabase", "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.EtcdVersionExporter", "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.EtcdVersionTools"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_EtcdVersionTools(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "EtcdVersionTools is the image for the Etcd exporter",
+				Properties: map[string]spec.Schema{
+					"image": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+				Required: []string{"image"},
+			},
+		},
+		Dependencies: []string{},
 	}
 }
 
@@ -1824,11 +1848,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MemcachedStatus(ref common.Referen
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"creationTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
 					"phase": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -1851,8 +1870,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MemcachedStatus(ref common.Referen
 				},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+		Dependencies: []string{},
 	}
 }
 
@@ -2102,6 +2120,31 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MongoDBList(ref common.ReferenceCa
 	}
 }
 
+func schema_apimachinery_apis_kubedb_v1alpha1_MongoDBReplicaSet(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"keyFile": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/api/core/v1.SecretVolumeSource"),
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.SecretVolumeSource"},
+	}
+}
+
 func schema_apimachinery_apis_kubedb_v1alpha1_MongoDBSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2119,6 +2162,19 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MongoDBSpec(ref common.ReferenceCa
 							Description: "Number of instances to deploy for a MongoDB database.",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"replicaSet": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MongoDB replica set",
+							Ref:         ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MongoDBReplicaSet"),
+						},
+					},
+					"storageType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StorageType can be durable (default) or ephemeral",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"storage": {
@@ -2156,6 +2212,12 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MongoDBSpec(ref common.ReferenceCa
 						SchemaProps: spec.SchemaProps{
 							Description: "Monitor is used monitor database instance",
 							Ref:         ref("kmodules.xyz/monitoring-agent-api/api/v1.AgentSpec"),
+						},
+					},
+					"configSource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ConfigSource is an optional field to provide custom configuration file for database (i.e mongod.cnf). If specified, this file will be used as configuration file otherwise default configuration file will be used.",
+							Ref:         ref("k8s.io/api/core/v1.VolumeSource"),
 						},
 					},
 					"podTemplate": {
@@ -2230,11 +2292,11 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MongoDBSpec(ref common.ReferenceCa
 						},
 					},
 				},
-				Required: []string{"version", "storage"},
+				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.BackupScheduleSpec", "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.InitSpec", "k8s.io/api/core/v1.Affinity", "k8s.io/api/core/v1.LocalObjectReference", "k8s.io/api/core/v1.PersistentVolumeClaimSpec", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.SecretVolumeSource", "k8s.io/api/core/v1.Toleration", "kmodules.xyz/monitoring-agent-api/api/v1.AgentSpec", "kmodules.xyz/offshoot-api/api/v1.PodTemplateSpec", "kmodules.xyz/offshoot-api/api/v1.ServiceTemplateSpec"},
+			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.BackupScheduleSpec", "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.InitSpec", "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.MongoDBReplicaSet", "k8s.io/api/core/v1.Affinity", "k8s.io/api/core/v1.LocalObjectReference", "k8s.io/api/core/v1.PersistentVolumeClaimSpec", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.SecretVolumeSource", "k8s.io/api/core/v1.Toleration", "k8s.io/api/core/v1.VolumeSource", "kmodules.xyz/monitoring-agent-api/api/v1.AgentSpec", "kmodules.xyz/offshoot-api/api/v1.PodTemplateSpec", "kmodules.xyz/offshoot-api/api/v1.ServiceTemplateSpec"},
 	}
 }
 
@@ -2243,11 +2305,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MongoDBStatus(ref common.Reference
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"creationTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
 					"phase": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -2270,8 +2327,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MongoDBStatus(ref common.Reference
 				},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+		Dependencies: []string{},
 	}
 }
 
@@ -2566,6 +2622,13 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MySQLSpec(ref common.ReferenceCall
 							Format:      "int32",
 						},
 					},
+					"storageType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StorageType can be durable (default) or ephemeral",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"storage": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Storage spec to specify how storage shall be used.",
@@ -2681,7 +2744,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MySQLSpec(ref common.ReferenceCall
 						},
 					},
 				},
-				Required: []string{"version", "storage"},
+				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
@@ -2694,11 +2757,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MySQLStatus(ref common.ReferenceCa
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"creationTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
 					"phase": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -2721,8 +2779,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_MySQLStatus(ref common.ReferenceCa
 				},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+		Dependencies: []string{},
 	}
 }
 
@@ -3167,6 +3224,13 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PostgresSpec(ref common.ReferenceC
 							Ref:         ref("k8s.io/api/core/v1.SecretVolumeSource"),
 						},
 					},
+					"storageType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StorageType can be durable (default) or ephemeral",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"storage": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Storage to specify how storage shall be used.",
@@ -3276,7 +3340,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PostgresSpec(ref common.ReferenceC
 						},
 					},
 				},
-				Required: []string{"version", "storage"},
+				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
@@ -3289,11 +3353,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PostgresStatus(ref common.Referenc
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"creationTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
 					"phase": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -3316,8 +3375,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PostgresStatus(ref common.Referenc
 				},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+		Dependencies: []string{},
 	}
 }
 
@@ -3731,6 +3789,13 @@ func schema_apimachinery_apis_kubedb_v1alpha1_RedisSpec(ref common.ReferenceCall
 							Format:      "int32",
 						},
 					},
+					"storageType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StorageType can be durable (default) or ephemeral",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"storage": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Storage spec to specify how storage shall be used.",
@@ -3828,7 +3893,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_RedisSpec(ref common.ReferenceCall
 						},
 					},
 				},
-				Required: []string{"version", "storage"},
+				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
@@ -3841,11 +3906,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_RedisStatus(ref common.ReferenceCa
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"creationTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
 					"phase": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -3868,8 +3928,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_RedisStatus(ref common.ReferenceCa
 				},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+		Dependencies: []string{},
 	}
 }
 
@@ -16583,6 +16642,20 @@ func schema_kmodulesxyz_offshoot_api_api_v1_PodSpec(ref common.ReferenceCallback
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
+					"args": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 					"nodeSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/",

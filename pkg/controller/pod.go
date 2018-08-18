@@ -106,6 +106,11 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 		commands = fmt.Sprintf("%s --initial-cluster-token=%s", commands, token)
 	}
 
+	etcdVersion, err := c.ExtClient.EtcdVersions().Get(string(cluster.Spec.Version), metav1.GetOptions{})
+	if err != nil {
+		return nil, kutil.VerbUnchanged, err
+	}
+
 	return core_util.CreateOrPatchPod(c.Controller.Client, podMeta, func(in *core.Pod) *core.Pod {
 		in.ObjectMeta = core_util.EnsureOwnerReference(in.ObjectMeta, ref)
 		in.Labels = core_util.UpsertMap(in.Labels, cluster.OffshootLabels())
@@ -121,7 +126,7 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 		readinessProbe.FailureThreshold = 3
 		container := core.Container{
 			Name:            api.ResourceSingularEtcd,
-			Image:           c.docker.GetImageWithTag(cluster),
+			Image:           etcdVersion.Spec.DB.Image,
 			ImagePullPolicy: core.PullAlways,
 			Command:         strings.Split(commands, " "),
 			LivenessProbe:   livenessProbe,
@@ -209,7 +214,10 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 
 func (c *Controller) upgradeOneMember(cl *Cluster, member *util.Member) error {
 	//c.status.Phase = api.c.cluster.Spec.Version)
-
+	etcdVersion, err := c.ExtClient.EtcdVersions().Get(string(cl.cluster.Spec.Version), metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
 	ns := cl.cluster.Namespace
 
 	pod, err := c.Controller.Client.CoreV1().Pods(ns).Get(member.Name, metav1.GetOptions{})
@@ -219,12 +227,12 @@ func (c *Controller) upgradeOneMember(cl *Cluster, member *util.Member) error {
 	oldpod := pod.DeepCopy()
 
 	cl.logger.Infof("upgrading the etcd member %v from %s to %s", member.Name, util.GetEtcdVersion(pod), string(cl.cluster.Spec.Version))
-	pod.Spec.Containers[0].Image = c.docker.GetImageWithTag(cl.cluster)
+	pod.Spec.Containers[0].Image = etcdVersion.Spec.DB.Image
 	//k8sutil.SetEtcdVersion(pod, c.cluster.Spec.Version)
 	//pod.Spec.
 
 	_, _, err = core_util.PatchPod(c.Controller.Client, oldpod, func(in *core.Pod) *core.Pod {
-		in.Spec.Containers[0].Image = c.docker.GetImageWithTag(cl.cluster)
+		in.Spec.Containers[0].Image = etcdVersion.Spec.DB.Image
 		in.Annotations[util.EtcdVersionAnnotationKey] = string(cl.cluster.Spec.Version)
 		return in
 	})
@@ -312,10 +320,6 @@ func upsertEnv(pod *core.Pod, etcd *api.Etcd) *core.Pod {
 					FieldPath: "metadata.namespace",
 				},
 			},
-		},
-		{
-			Name:  "PRIMARY_HOST",
-			Value: etcd.ServiceName(),
 		},
 		{
 			Name: "NODE_NAME",

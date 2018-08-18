@@ -13,7 +13,6 @@ import (
 	"github.com/kubedb/apimachinery/pkg/controller/dormantdatabase"
 	snapc "github.com/kubedb/apimachinery/pkg/controller/snapshot"
 	"github.com/kubedb/apimachinery/pkg/eventer"
-	"github.com/kubedb/etcd/pkg/docker"
 	core "k8s.io/api/core/v1"
 	crd_api "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
@@ -36,7 +35,6 @@ type Controller struct {
 	amc.Config
 	*amc.Controller
 
-	docker docker.Docker
 	// Prometheus client
 	promClient pcm.MonitoringV1Interface
 	// Cron Controller
@@ -62,7 +60,6 @@ func New(
 	extClient cs.KubedbV1alpha1Interface,
 	promClient pcm.MonitoringV1Interface,
 	cronController snapc.CronControllerInterface,
-	docker docker.Docker,
 	opt amc.Config,
 ) *Controller {
 	return &Controller{
@@ -72,7 +69,6 @@ func New(
 			ApiExtKubeClient: apiExtKubeClient,
 		},
 		Config:         opt,
-		docker:         docker,
 		promClient:     promClient,
 		cronController: cronController,
 		recorder:       eventer.NewEventRecorder(client, "Etcd operator"),
@@ -88,6 +84,7 @@ func (c *Controller) EnsureCustomResourceDefinitions() error {
 	log.Infoln("Ensuring CustomResourceDefinition...")
 	crds := []*crd_api.CustomResourceDefinition{
 		api.Etcd{}.CustomResourceDefinition(),
+		api.EtcdVersion{}.CustomResourceDefinition(),
 		api.DormantDatabase{}.CustomResourceDefinition(),
 		api.Snapshot{}.CustomResourceDefinition(),
 	}

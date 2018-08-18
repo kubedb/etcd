@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/mergepatch"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -116,10 +115,6 @@ func (a *EtcdValidator) Admit(req *admission.AdmissionRequest) *admission.Admiss
 	return status
 }
 
-var (
-	etcdVersions = sets.NewString("3.2.13", "3.3.9")
-)
-
 // ValidateEtcd checks if the object satisfies all the requirements.
 // It is not method of Interface, because it is referenced from controller package too.
 func ValidateEtcd(client kubernetes.Interface, extClient kubedbv1alpha1.KubedbV1alpha1Interface, etcd *api.Etcd) error {
@@ -127,9 +122,8 @@ func ValidateEtcd(client kubernetes.Interface, extClient kubedbv1alpha1.KubedbV1
 		return fmt.Errorf(`object 'Version' is missing in '%v'`, etcd.Spec)
 	}
 
-	// Check Etcd version validation
-	if !etcdVersions.Has(string(etcd.Spec.Version)) {
-		return fmt.Errorf(`KubeDB doesn't support Etcd version: %s`, string(etcd.Spec.Version))
+	if _, err := extClient.EtcdVersions().Get(string(etcd.Spec.Version), metav1.GetOptions{}); err != nil {
+		return err
 	}
 
 	if etcd.Spec.Replicas == nil {
@@ -138,7 +132,7 @@ func ValidateEtcd(client kubernetes.Interface, extClient kubedbv1alpha1.KubedbV1
 
 	if etcd.Spec.Storage != nil {
 		var err error
-		if err = amv.ValidateStorage(client, *etcd.Spec.Storage); err != nil {
+		if err = amv.ValidateStorage(client, etcd.Spec.StorageType, etcd.Spec.Storage); err != nil {
 			return err
 		}
 	}
