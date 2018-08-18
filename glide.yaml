@@ -23,7 +23,7 @@ import:
 - package: k8s.io/apimachinery
   repo: https://github.com/pharmer/apimachinery.git
   vcs: git
-  version: release-1.11
+  version: etcd-new
 - package: k8s.io/apiserver
   repo: https://github.com/pharmer/apiserver.git
   vcs: git

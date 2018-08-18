@@ -135,7 +135,7 @@ func (c *Controller) ensureStatsService(etcd *api.Etcd) (kutil.VerbType, error) 
 				Name:       api.PrometheusExporterPortName,
 				Protocol:   core.ProtocolTCP,
 				Port:       etcd.Spec.Monitor.Prometheus.Port,
-				TargetPort: intstr.FromString(api.PrometheusExporterPortName),
+				TargetPort: intstr.FromString("client"),
 			},
 		})
 		return in
