@@ -80,7 +80,7 @@ func (a *SnapshotValidator) Admit(req *admission.AdmissionRequest) *admission.Ad
 			return hookapi.StatusBadRequest(err)
 		}
 		if err := plugin.ValidateUpdate(obj, oldObject, req.Kind.Kind); err != nil {
-			return hookapi.StatusBadRequest(fmt.Errorf("%v", err))
+			return hookapi.StatusBadRequest(err)
 		}
 		// Skip checking validation if Spec is not changed
 		if meta_util.Equal(obj.(*api.Snapshot).Spec, oldObject.(*api.Snapshot).Spec) {
@@ -93,7 +93,7 @@ func (a *SnapshotValidator) Admit(req *admission.AdmissionRequest) *admission.Ad
 		return hookapi.StatusForbidden(err)
 	}
 	// validates Snapshot Spec
-	if err := amv.ValidateSnapshotSpec(a.client, obj.(*api.Snapshot).Spec.Backend, req.Namespace); err != nil {
+	if err := amv.ValidateSnapshotSpec(obj.(*api.Snapshot).Spec.Backend); err != nil {
 		return hookapi.StatusForbidden(err)
 	}
 	if req.Operation == admission.Create {

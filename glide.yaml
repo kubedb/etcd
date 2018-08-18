@@ -11,7 +11,7 @@ import:
   version: master
 - package: github.com/jpillora/go-ogle-analytics
 - package: github.com/kubedb/apimachinery
-  version: master
+  version: etcd-up
 - package: github.com/spf13/cobra
   version: v0.0.3
 - package: github.com/spf13/pflag
@@ -23,7 +23,7 @@ import:
 - package: k8s.io/apimachinery
   repo: https://github.com/pharmer/apimachinery.git
   vcs: git
-  version: etcd-new
+  version: release-1.11
 - package: k8s.io/apiserver
   repo: https://github.com/pharmer/apiserver.git
   vcs: git

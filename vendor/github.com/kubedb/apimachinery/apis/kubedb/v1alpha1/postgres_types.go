@@ -47,8 +47,11 @@ type PostgresSpec struct {
 	// Database authentication secret
 	DatabaseSecret *core.SecretVolumeSource `json:"databaseSecret,omitempty"`
 
+	// StorageType can be durable (default) or ephemeral
+	StorageType StorageType `json:"storageType,omitempty"`
+
 	// Storage to specify how storage shall be used.
-	Storage core.PersistentVolumeClaimSpec `json:"storage"`
+	Storage *core.PersistentVolumeClaimSpec `json:"storage,omitempty"`
 
 	// Init is used to initialize database
 	// +optional
@@ -119,9 +122,8 @@ type PostgresArchiverSpec struct {
 }
 
 type PostgresStatus struct {
-	CreationTime *metav1.Time  `json:"creationTime,omitempty"`
-	Phase        DatabasePhase `json:"phase,omitempty"`
-	Reason       string        `json:"reason,omitempty"`
+	Phase  DatabasePhase `json:"phase,omitempty"`
+	Reason string        `json:"reason,omitempty"`
 	// observedGeneration is the most recent generation observed for this resource. It corresponds to the
 	// resource's generation, which is updated on mutation by the API Server.
 	// +optional

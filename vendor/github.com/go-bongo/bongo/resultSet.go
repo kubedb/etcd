@@ -1,7 +1,7 @@
 package bongo
 
 import (
-	"gopkg.in/mgo.v2"
+	"github.com/globalsign/mgo"
 	"math"
 )
 
@@ -74,7 +74,7 @@ func (r *ResultSet) Paginate(perPage, page int) (*PaginationInfo, error) {
 	// Get count on a different session to avoid blocking
 	sess := r.Collection.Connection.Session.Copy()
 
-	count, err := sess.DB(r.Collection.Connection.Config.Database).C(r.Collection.Name).Find(r.Params).Count()
+	count, err := sess.DB(r.Collection.Database).C(r.Collection.Name).Find(r.Params).Count()
 	sess.Close()
 
 	if err != nil {

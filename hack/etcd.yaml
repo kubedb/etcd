@@ -4,7 +4,7 @@ metadata:
   name: etcdb
   namespace: demo
 spec:
-  replicas: 1
+  replicas: 3
   version: "3.2.13"
   storage:
     storageClassName: "standard"
