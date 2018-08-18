@@ -236,11 +236,13 @@ func getPreconditionFunc() []mergepatch.PreconditionFunc {
 }
 
 var preconditionSpecFields = []string{
-	//"spec.version",
+	// "spec.version",
+	"spec.storageType",
 	"spec.storage",
 	"spec.databaseSecret",
-	"spec.nodeSelector",
 	"spec.init",
+	"spec.podTemplate.spec.nodeSelector",
+	"spec.podTemplate.spec.env",
 }
 
 func preconditionFailedError(kind string) error {
