@@ -128,7 +128,7 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 			Name:            api.ResourceSingularEtcd,
 			Image:           etcdVersion.Spec.DB.Image,
 			ImagePullPolicy: core.PullAlways,
-			Command:         strings.Split(commands, " "),
+			Command:         meta_util.UpsertArgumentList(strings.Split(commands, " "), cluster.Spec.PodTemplate.Spec.Args),
 			LivenessProbe:   livenessProbe,
 			ReadinessProbe:  readinessProbe,
 			Ports: []core.ContainerPort{
