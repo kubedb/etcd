@@ -151,23 +151,43 @@ func (c *Controller) createPod(cluster *api.Etcd, members util.MemberSet, m *uti
 				MountPath: peerTLSDir,
 				Name:      peerTLSVolume,
 			})
-			volumes = append(volumes, core.Volume{Name: peerTLSVolume, VolumeSource: core.VolumeSource{
-				Secret: &core.SecretVolumeSource{SecretName: cluster.Spec.TLS.Member.PeerSecret},
-			}})
+			volumes = append(volumes,
+				core.Volume{
+					Name: peerTLSVolume,
+					VolumeSource: core.VolumeSource{
+						Secret: &core.SecretVolumeSource{
+							SecretName: cluster.Spec.TLS.Member.PeerSecret,
+						},
+					},
+				})
 		}
 		if m.SecureClient {
-			container.VolumeMounts = append(container.VolumeMounts, core.VolumeMount{
-				MountPath: serverTLSDir,
-				Name:      serverTLSVolume,
-			}, core.VolumeMount{
-				MountPath: operatorEtcdTLSDir,
-				Name:      operatorEtcdTLSVolume,
-			})
-			volumes = append(volumes, core.Volume{Name: serverTLSVolume, VolumeSource: core.VolumeSource{
-				Secret: &core.SecretVolumeSource{SecretName: cluster.Spec.TLS.Member.ServerSecret},
-			}}, core.Volume{Name: operatorEtcdTLSVolume, VolumeSource: core.VolumeSource{
-				Secret: &core.SecretVolumeSource{SecretName: cluster.Spec.TLS.OperatorSecret},
-			}})
+			container.VolumeMounts = append(container.VolumeMounts,
+				core.VolumeMount{
+					MountPath: serverTLSDir,
+					Name:      serverTLSVolume,
+				},
+				core.VolumeMount{
+					MountPath: operatorEtcdTLSDir,
+					Name:      operatorEtcdTLSVolume,
+				})
+			volumes = append(volumes,
+				core.Volume{
+					Name: serverTLSVolume,
+					VolumeSource: core.VolumeSource{
+						Secret: &core.SecretVolumeSource{
+							SecretName: cluster.Spec.TLS.Member.ServerSecret,
+						},
+					},
+				},
+				core.Volume{
+					Name: operatorEtcdTLSVolume,
+					VolumeSource: core.VolumeSource{
+						Secret: &core.SecretVolumeSource{
+							SecretName: cluster.Spec.TLS.OperatorSecret,
+						},
+					},
+				})
 		}
 
 		if hasOsmVolume {
@@ -283,7 +303,17 @@ func upsertDataVolume(pod *core.Pod, etcd *api.Etcd) *core.Pod {
 			volume := core.Volume{
 				Name: "data",
 			}
-			if pvcSpec != nil {
+			if etcd.Spec.StorageType == api.StorageTypeEphemeral {
+				ed := core.EmptyDirVolumeSource{}
+				if pvcSpec != nil {
+					if sz, found := pvcSpec.Resources.Requests[core.ResourceStorage]; found {
+						ed.SizeLimit = &sz
+					}
+				}
+				volume.VolumeSource = core.VolumeSource{
+					EmptyDir: &ed,
+				}
+			} else {
 				if len(pvcSpec.AccessModes) == 0 {
 					pvcSpec.AccessModes = []core.PersistentVolumeAccessMode{
 						core.ReadWriteOnce,
@@ -296,15 +326,9 @@ func upsertDataVolume(pod *core.Pod, etcd *api.Etcd) *core.Pod {
 						ClaimName: pod.Name,
 					},
 				}
-			} else {
-				volume.VolumeSource = core.VolumeSource{
-					EmptyDir: &core.EmptyDirVolumeSource{},
-				}
 			}
+			pod.Spec.Volumes = core_util.UpsertVolume(pod.Spec.Volumes, volume)
 
-			volumeClaims := pod.Spec.Volumes
-			volumeClaims = core_util.UpsertVolume(volumeClaims, volume)
-			pod.Spec.Volumes = volumeClaims
 			break
 		}
 	}

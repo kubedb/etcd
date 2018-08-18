@@ -119,9 +119,8 @@ func (a *EtcdValidator) Admit(req *admission.AdmissionRequest) *admission.Admiss
 // It is not method of Interface, because it is referenced from controller package too.
 func ValidateEtcd(client kubernetes.Interface, extClient kubedbv1alpha1.KubedbV1alpha1Interface, etcd *api.Etcd) error {
 	if etcd.Spec.Version == "" {
-		return fmt.Errorf(`object 'Version' is missing in '%v'`, etcd.Spec)
+		return errors.New(`'spec.version' is missing`)
 	}
-
 	if _, err := extClient.EtcdVersions().Get(string(etcd.Spec.Version), metav1.GetOptions{}); err != nil {
 		return err
 	}
@@ -130,6 +129,9 @@ func ValidateEtcd(client kubernetes.Interface, extClient kubedbv1alpha1.KubedbV1
 		return fmt.Errorf(`spec.replicas "%v" invalid. Value must be one`, etcd.Spec.Replicas)
 	}
 
+	if etcd.Spec.StorageType == "" {
+		return fmt.Errorf(`'spec.storageType' is missing`)
+	}
 	if etcd.Spec.Storage != nil {
 		var err error
 		if err = amv.ValidateStorage(client, etcd.Spec.StorageType, etcd.Spec.Storage); err != nil {
