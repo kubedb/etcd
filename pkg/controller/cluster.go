@@ -7,8 +7,6 @@ import (
 	"time"
 
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-
-	//cs "github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1"
 	dbutil "github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	"github.com/kubedb/etcd/pkg/util"
 	"github.com/pkg/errors"
@@ -372,9 +370,8 @@ func (c *Controller) updateCRStatus(cl *Cluster) error {
 	if reflect.DeepEqual(cl.cluster.Status, cl.status) {
 		return nil
 	}
-	_, _, err := dbutil.PatchEtcd(c.Controller.ExtClient, cl.cluster, func(in *api.Etcd) *api.Etcd {
-
-		in.Status.Phase = cl.status.Phase
+	_, err := dbutil.UpdateEtcdStatus(c.Controller.ExtClient, cl.cluster, func(in *api.EtcdStatus) *api.EtcdStatus {
+		in.Phase = cl.status.Phase
 		return in
 	})
 	return err

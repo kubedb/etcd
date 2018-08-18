@@ -29,7 +29,7 @@ func etcdEqual(old, new *api.Etcd) bool {
 	}
 	if !meta_util.Equal(old.Annotations, new.Annotations) {
 		diff := meta_util.Diff(old.Annotations, new.Annotations)
-		log.Infof("Annotations in Etcd %s/%s has changed. Diff: %s\n", new.Namespace, new.Name, diff)
+		log.Infof("Annotations in Etcd %s/%s has changed. Diff: %s", new.Namespace, new.Name, diff)
 		return false
 	}
 	return true
@@ -44,7 +44,7 @@ func (c *Controller) runEtcd(key string) error {
 	}
 
 	if !exists {
-		log.Debugf("Etcd %s does not exist anymore\n", key)
+		log.Debugf("Etcd %s does not exist anymore", key)
 	} else {
 		// Note that you also have to check the uid if you have a local controlled resource, which
 		// is dependent on the actual instance, to detect that a Etcd was recreated with the same name
