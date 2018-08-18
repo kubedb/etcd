@@ -28,9 +28,9 @@ func (c *Controller) SetDatabaseStatus(meta metav1.ObjectMeta, phase api.Databas
 	if err != nil {
 		return err
 	}
-	_, _, err = util.PatchEtcd(c.ExtClient, etcd, func(in *api.Etcd) *api.Etcd {
-		in.Status.Phase = phase
-		in.Status.Reason = reason
+	_, err = util.UpdateEtcdStatus(c.ExtClient, etcd, func(in *api.EtcdStatus) *api.EtcdStatus {
+		in.Phase = phase
+		in.Reason = reason
 		return in
 	})
 	return err

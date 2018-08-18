@@ -134,13 +134,13 @@ func (c *Controller) StartAndRunControllers(stopCh <-chan struct{}) {
 	// Wait for all involved caches to be synced, before processing items from the queue is started
 	for t, v := range c.KubeInformerFactory.WaitForCacheSync(stopCh) {
 		if !v {
-			log.Fatalf("%v timed out waiting for caches to sync\n", t)
+			log.Fatalf("%v timed out waiting for caches to sync", t)
 			return
 		}
 	}
 	for t, v := range c.KubedbInformerFactory.WaitForCacheSync(stopCh) {
 		if !v {
-			log.Fatalf("%v timed out waiting for caches to sync\n", t)
+			log.Fatalf("%v timed out waiting for caches to sync", t)
 			return
 		}
 	}
@@ -163,9 +163,9 @@ func (c *Controller) pushFailureEvent(etcd *api.Etcd, reason string) {
 		)
 	}
 
-	mg, _, err := kutildb.PatchEtcd(c.ExtClient, etcd, func(in *api.Etcd) *api.Etcd {
-		in.Status.Phase = api.DatabasePhaseFailed
-		in.Status.Reason = reason
+	db, err := kutildb.UpdateEtcdStatus(c.ExtClient, etcd, func(in *api.EtcdStatus) *api.EtcdStatus {
+		in.Phase = api.DatabasePhaseFailed
+		in.Reason = reason
 		return in
 	})
 	if err != nil {
@@ -178,5 +178,5 @@ func (c *Controller) pushFailureEvent(etcd *api.Etcd, reason string) {
 			)
 		}
 	}
-	etcd.Status = mg.Status
+	etcd.Status = db.Status
 }

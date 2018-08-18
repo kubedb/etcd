@@ -129,8 +129,8 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		})
 	}
 
-	ms, _, err := util.PatchEtcd(c.ExtClient, etcd, func(in *api.Etcd) *api.Etcd {
-		in.Status.Phase = api.DatabasePhaseRunning
+	db, err := util.UpdateEtcdStatus(c.ExtClient, etcd, func(in *api.EtcdStatus) *api.EtcdStatus {
+		in.Phase = api.DatabasePhaseRunning
 		return in
 	})
 
@@ -145,7 +145,7 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 		}
 		return err
 	}
-	etcd.Status = ms.Status
+	etcd.Status = db.Status
 
 	// Ensure Schedule backup
 	c.ensureBackupScheduler(etcd)
@@ -204,8 +204,8 @@ func (c *Controller) ensureBackupScheduler(etcd *api.Etcd) {
 }
 
 func (c *Controller) initialize(etcd *api.Etcd) error {
-	mg, _, err := util.PatchEtcd(c.ExtClient, etcd, func(in *api.Etcd) *api.Etcd {
-		in.Status.Phase = api.DatabasePhaseInitializing
+	db, err := util.UpdateEtcdStatus(c.ExtClient, etcd, func(in *api.EtcdStatus) *api.EtcdStatus {
+		in.Phase = api.DatabasePhaseInitializing
 		return in
 	})
 	if err != nil {
@@ -219,7 +219,7 @@ func (c *Controller) initialize(etcd *api.Etcd) error {
 		}
 		return err
 	}
-	etcd.Status = mg.Status
+	etcd.Status = db.Status
 
 	return nil
 }
