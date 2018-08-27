@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"time"
 
+	meta_util "github.com/appscode/kutil/meta"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	dbutil "github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	"github.com/kubedb/etcd/pkg/util"
@@ -373,6 +374,7 @@ func (c *Controller) updateCRStatus(cl *Cluster) error {
 	_, err := dbutil.UpdateEtcdStatus(c.Controller.ExtClient, cl.cluster, func(in *api.EtcdStatus) *api.EtcdStatus {
 		in.Phase = cl.status.Phase
 		in.ObservedGeneration = cl.cluster.Generation
+		in.ObservedGenerationHash = meta_util.GenerationHash(cl.cluster)
 		return in
 	})
 	return err
