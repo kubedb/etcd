@@ -13,11 +13,7 @@ func (c *Controller) initWatcher() {
 	c.etcdInformer = c.KubedbInformerFactory.Kubedb().V1alpha1().Etcds().Informer()
 	c.etcdQueue = queue.New("Etcd", c.MaxNumRequeues, c.NumThreads, c.runEtcd)
 	c.etcdLister = c.KubedbInformerFactory.Kubedb().V1alpha1().Etcds().Lister()
-	c.etcdInformer.AddEventHandler(queue.NewEventHandler(c.etcdQueue.GetQueue(), func(old interface{}, new interface{}) bool {
-		oldObj := old.(*api.Etcd)
-		newObj := new.(*api.Etcd)
-		return newObj.DeletionTimestamp != nil || !newObj.AlreadyObserved(oldObj)
-	}))
+	c.etcdInformer.AddEventHandler(queue.NewObservableHandler(c.etcdQueue.GetQueue(), api.EnableStatusSubresource))
 }
 
 func (c *Controller) runEtcd(key string) error {
