@@ -40,7 +40,7 @@ func TestConfigParsingMemberFlags(t *testing.T) {
 		"-advertise-client-urls=http://localhost:7000,https://localhost:7001",
 	}
 
-	cfg := newConfig()
+	cfg := NewConfig()
 	err := cfg.parse(args)
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +80,7 @@ func TestConfigFileMemberFields(t *testing.T) {
 
 	args := []string{fmt.Sprintf("--Config-file=%s", tmpfile.Name())}
 
-	cfg := newConfig()
+	cfg := NewConfig()
 	if err = cfg.parse(args); err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestConfigParsingClusteringFlags(t *testing.T) {
 		"-discovery-fallback=exit",
 	}
 
-	cfg := newConfig()
+	cfg := NewConfig()
 	if err := cfg.parse(args); err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestConfigFileClusteringFields(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	args := []string{fmt.Sprintf("--Config-file=%s", tmpfile.Name())}
-	cfg := newConfig()
+	cfg := NewConfig()
 	err = cfg.parse(args)
 	if err != nil {
 		t.Fatal(err)
@@ -188,7 +188,7 @@ func TestConfigFileClusteringFlags(t *testing.T) {
 
 		args := []string{fmt.Sprintf("--Config-file=%s", tmpfile.Name())}
 
-		cfg := newConfig()
+		cfg := NewConfig()
 		if err := cfg.parse(args); err != nil {
 			t.Errorf("%d: err = %v", i, err)
 		}
@@ -198,7 +198,7 @@ func TestConfigFileClusteringFlags(t *testing.T) {
 func TestConfigParsingOtherFlags(t *testing.T) {
 	args := []string{"-proxy=readonly"}
 
-	cfg := newConfig()
+	cfg := NewConfig()
 	err := cfg.parse(args)
 	if err != nil {
 		t.Fatal(err)
@@ -224,7 +224,7 @@ func TestConfigFileOtherFields(t *testing.T) {
 
 	args := []string{fmt.Sprintf("--Config-file=%s", tmpfile.Name())}
 
-	cfg := newConfig()
+	cfg := NewConfig()
 	err = cfg.parse(args)
 	if err != nil {
 		t.Fatal(err)
@@ -255,7 +255,7 @@ func TestConfigParsingConflictClusteringFlags(t *testing.T) {
 	}
 
 	for i, tt := range conflictArgs {
-		cfg := newConfig()
+		cfg := NewConfig()
 		if err := cfg.parse(tt); err != embed.ErrConflictBootstrapFlags {
 			t.Errorf("%d: err = %v, want %v", i, err, embed.ErrConflictBootstrapFlags)
 		}
@@ -298,7 +298,7 @@ func TestConfigFileConflictClusteringFlags(t *testing.T) {
 
 		args := []string{fmt.Sprintf("--Config-file=%s", tmpfile.Name())}
 
-		cfg := newConfig()
+		cfg := NewConfig()
 		if err := cfg.parse(args); err != embed.ErrConflictBootstrapFlags {
 			t.Errorf("%d: err = %v, want %v", i, err, embed.ErrConflictBootstrapFlags)
 		}
@@ -362,7 +362,7 @@ func TestConfigParsingMissedAdvertiseClientURLsFlag(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		cfg := newConfig()
+		cfg := NewConfig()
 		if err := cfg.parse(tt.args); err != tt.werr {
 			t.Errorf("%d: err = %v, want %v", i, err, tt.werr)
 		}
@@ -378,7 +378,7 @@ func TestConfigIsNewCluster(t *testing.T) {
 		{embed.ClusterStateFlagNew, true},
 	}
 	for i, tt := range tests {
-		cfg := newConfig()
+		cfg := NewConfig()
 		args := []string{"--initial-cluster-state", tests[i].state}
 		if err := cfg.parse(args); err != nil {
 			t.Fatalf("#%d: unexpected clusterState.Set error: %v", i, err)
@@ -399,7 +399,7 @@ func TestConfigIsProxy(t *testing.T) {
 		{proxyFlagOn, true},
 	}
 	for i, tt := range tests {
-		cfg := newConfig()
+		cfg := NewConfig()
 		if err := cfg.proxy.Set(tt.proxy); err != nil {
 			t.Fatalf("#%d: unexpected proxy.Set error: %v", i, err)
 		}
@@ -419,7 +419,7 @@ func TestConfigIsReadonlyProxy(t *testing.T) {
 		{proxyFlagOn, false},
 	}
 	for i, tt := range tests {
-		cfg := newConfig()
+		cfg := NewConfig()
 		if err := cfg.proxy.Set(tt.proxy); err != nil {
 			t.Fatalf("#%d: unexpected proxy.Set error: %v", i, err)
 		}
@@ -438,7 +438,7 @@ func TestConfigShouldFallbackToProxy(t *testing.T) {
 		{fallbackFlagExit, false},
 	}
 	for i, tt := range tests {
-		cfg := newConfig()
+		cfg := NewConfig()
 		if err := cfg.fallback.Set(tt.fallback); err != nil {
 			t.Fatalf("#%d: unexpected fallback.Set error: %v", i, err)
 		}
@@ -476,7 +476,7 @@ func TestConfigFileElectionTimeout(t *testing.T) {
 
 		args := []string{fmt.Sprintf("--Config-file=%s", tmpfile.Name())}
 
-		cfg := newConfig()
+		cfg := NewConfig()
 		if err := cfg.parse(args); err == nil || !strings.Contains(err.Error(), tt.errStr) {
 			t.Errorf("%d: Wrong err = %v", i, err)
 		}
@@ -536,7 +536,7 @@ func validateMemberFlags(t *testing.T, cfg *Config) {
 }
 
 func validateClusteringFlags(t *testing.T, cfg *Config) {
-	wcfg := newConfig()
+	wcfg := NewConfig()
 	wcfg.APUrls = []url.URL{{Scheme: "http", Host: "localhost:8000"}, {Scheme: "https", Host: "localhost:8001"}}
 	wcfg.ACUrls = []url.URL{{Scheme: "http", Host: "localhost:7000"}, {Scheme: "https", Host: "localhost:7001"}}
 	wcfg.ClusterState = embed.ClusterStateFlagExisting
@@ -565,7 +565,7 @@ func validateClusteringFlags(t *testing.T, cfg *Config) {
 }
 
 func validateOtherFlags(t *testing.T, cfg *Config) {
-	wcfg := newConfig()
+	wcfg := NewConfig()
 	wcfg.proxy.Set(proxyFlagReadonly)
 	if cfg.proxy.String() != wcfg.proxy.String() {
 		t.Errorf("proxy = %v, want %v", cfg.proxy, wcfg.proxy)
