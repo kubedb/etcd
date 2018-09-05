@@ -242,9 +242,10 @@ func sampleEtcd() api.Etcd {
 			},
 		},
 		Spec: api.EtcdSpec{
-			Version:    "3.4",
+			Version:    "3.2.13",
 			Replicas:   types.Int32P(1),
 			DoNotPause: true,
+			StorageType: api.StorageTypeDurable,
 			Storage: &core.PersistentVolumeClaimSpec{
 				StorageClassName: types.StringP("standard"),
 				Resources: core.ResourceRequirements{
@@ -263,6 +264,7 @@ func sampleEtcd() api.Etcd {
 					},
 				},
 			},
+			TerminationPolicy: api.TerminationPolicyPause,
 		},
 	}
 }
