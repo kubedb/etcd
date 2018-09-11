@@ -17,11 +17,12 @@ type KubedbTable struct {
 	LastName           string
 }
 
-func (f *Framework) GetEtcdClient(meta metav1.ObjectMeta) (*bongo.Connection, error) {
+func (f *Framework) ForwardPort(meta metav1.ObjectMeta) (*portforward.Tunnel, error) {
 	etcd, err := f.GetEtcd(meta)
 	if err != nil {
 		return nil, err
 	}
+
 	clientPodName := fmt.Sprintf("%v-0", etcd.Name)
 	tunnel := portforward.NewTunnel(
 		f.kubeClient.CoreV1().RESTClient(),
@@ -30,10 +31,18 @@ func (f *Framework) GetEtcdClient(meta metav1.ObjectMeta) (*bongo.Connection, er
 		clientPodName,
 		27017,
 	)
-
 	if err := tunnel.ForwardPort(); err != nil {
 		return nil, err
 	}
+
+	return tunnel, nil
+}
+func (f *Framework) GetEtcdClient(meta metav1.ObjectMeta, tunnel *portforward.Tunnel) (*bongo.Connection, error) {
+	etcd, err := f.GetEtcd(meta)
+	if err != nil {
+		return nil, err
+	}
+
 	user := "root"
 	pass, err := f.GetEtcdRootPassword(etcd)
 
@@ -41,15 +50,44 @@ func (f *Framework) GetEtcdClient(meta metav1.ObjectMeta) (*bongo.Connection, er
 		ConnectionString: fmt.Sprintf("etcd://%s:%s@127.0.0.1:%v", user, pass, tunnel.Local),
 		Database:         "kubedb",
 	}
-
 	return bongo.Connect(config)
+}
 
+func (f *Framework) EventuallyDatabaseReady(meta metav1.ObjectMeta) GomegaAsyncAssertion {
+	return Eventually(
+		func() bool {
+			tunnel, err := f.ForwardPort(meta)
+			if err != nil {
+				return false
+			}
+			defer tunnel.Close()
+
+			en, err := f.GetEtcdClient(meta, tunnel)
+			if err != nil {
+				return false
+			}
+			defer en.Session.Close()
+
+			if err := en.Session.Ping(); err != nil {
+				return false
+			}
+			return true
+		},
+		time.Minute*15,
+		time.Second*10,
+	)
 }
 
 func (f *Framework) EventuallyInsertDocument(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() bool {
-			en, err := f.GetEtcdClient(meta)
+			tunnel, err := f.ForwardPort(meta)
+			if err != nil {
+				return false
+			}
+			defer tunnel.Close()
+
+			en, err := f.GetEtcdClient(meta, tunnel)
 			if err != nil {
 				return false
 			}
@@ -78,7 +116,13 @@ func (f *Framework) EventuallyInsertDocument(meta metav1.ObjectMeta) GomegaAsync
 func (f *Framework) EventuallyDocumentExists(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() bool {
-			en, err := f.GetEtcdClient(meta)
+			tunnel, err := f.ForwardPort(meta)
+			if err != nil {
+				return false
+			}
+			defer tunnel.Close()
+
+			en, err := f.GetEtcdClient(meta, tunnel)
 			if err != nil {
 				return false
 			}
