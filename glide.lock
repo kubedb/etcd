@@ -1,5 +1,5 @@
 hash: 420fd2b583d9fab92041bd3c08d8a4f348535d8f7eadb14637871f00888015c6
-updated: 2018-09-11T18:27:22.03350225+06:00
+updated: 2018-09-20T17:09:47.158785221+06:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -35,7 +35,7 @@ imports:
   - admission/v1beta1
   - registry/admissionreview/v1beta1
 - name: github.com/appscode/kutil
-  version: 58a89a000f0c44560e97537d989ec6d2fba95f64
+  version: bd70cefb33397b4c196aca7e33cab656755e195e
   subpackages:
   - apiextensions/v1beta1
   - core/v1
@@ -234,7 +234,7 @@ imports:
 - name: github.com/evanphx/json-patch
   version: 94e38aa1586e8a6c8a75770bddf5ff84c48a106b
 - name: github.com/fatih/structs
-  version: ebf56d35bba727c68ac77f56f2fcf90b181851aa
+  version: 4966fc68f5b7593aafa6cbbba2d65ec6e1416047
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-bongo/bongo
@@ -274,7 +274,7 @@ imports:
 - name: github.com/google/btree
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/go-cmp
-  version: 2006917edc5a27cd174dbc4baba31a137d6cb9ff
+  version: 875f8df8b7965f1eac1098d36d677f807ac0b49e
   subpackages:
   - cmp
   - cmp/internal/diff
@@ -291,7 +291,7 @@ imports:
   - compiler
   - extensions
 - name: github.com/graymeta/stow
-  version: afce6d90444a3ba63c6d6671498c6cdc79375369
+  version: 1849a82ac7fbd3e5cb144bcc711544e90903eac4
   repo: https://github.com/appscode/stow.git
   vcs: git
   subpackages:
@@ -333,7 +333,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 1624edc4454b8682399def8740d46db5e4362ba4
 - name: github.com/kubedb/apimachinery
-  version: e40747156f300904d4e1276180d6d37d409e96c9
+  version: bb2baed87600b4f0b4214ce6c8a488c128880569
   subpackages:
   - apis/kubedb
   - apis/kubedb/v1alpha1
@@ -542,7 +542,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/api
-  version: 7ca32eb868bf53ea2fc406698eb98583a8073d19
+  version: 19ff8768a5c0b8e46ea281065664787eefc24121
   subpackages:
   - gensupport
   - googleapi
