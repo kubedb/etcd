@@ -2,13 +2,14 @@ apiVersion: kubedb.com/v1alpha1
 kind: Snapshot
 metadata:
   name: snapshot-etcd
+  namespace: demo
   labels:
     kubedb.com/kind: Etcd
 spec:
-  databaseName: etcdb-demo
+  databaseName: etcdb
   storageSecretName: gcs-secret
   gcs:
-    bucket: kubedbetcd
+    bucket: kubedb
     prefix: etcdb-demo
   resources:
     requests:

@@ -1,7 +1,7 @@
 apiVersion: kubedb.com/v1alpha1
 kind: Etcd
 metadata:
-  name: etcdb-restore
+  name: etcdb-wipe
   namespace: demo
 spec:
   replicas: 3
@@ -13,7 +13,6 @@ spec:
     resources:
       requests:
         storage: 1Gi
-  init:
-    snapshotSource:
-      name: snapshot-etcd
-      namespace: demo
+  terminationPolicy: wipeOut
+  monitor:
+    agent: prometheus.io/builtin

@@ -14,29 +14,29 @@ DIST="$REPO_ROOT/dist"
 mkdir -p "$DIST"
 
 build_binary() {
-    pushd $REPO_ROOT
-    ./hack/builddeps.sh
-    ./hack/make.py build etcd-operator
-    popd
+  pushd $REPO_ROOT
+  ./hack/builddeps.sh
+  ./hack/make.py build etcd-operator
+  popd
 }
 
 build_docker() {
-    pushd "$REPO_ROOT/hack/docker/etcd/$TAG"
+  pushd "$REPO_ROOT/hack/docker/etcd/$TAG"
 
-    # Copy etcd-operator
-    cp "$DIST/etcd-operator/etcd-operator-alpine-amd64" etcd-operator
-    chmod 755 etcd-operator
+  # Copy etcd-operator
+  cp "$DIST/etcd-operator/etcd-operator-alpine-amd64" etcd-operator
+  chmod 755 etcd-operator
 
-    local cmd="docker build -t $DOCKER_REGISTRY/$IMG:$TAG ."
-    echo $cmd; $cmd
+  local cmd="docker build -t $DOCKER_REGISTRY/$IMG:$TAG ."
+  echo $cmd; $cmd
 
-    rm  etcd-operator
-    popd
+  rm etcd-operator
+  popd
 }
 
 build() {
-    build_binary
-    build_docker
+  build_binary
+  build_docker
 }
 
 binary_repo $@

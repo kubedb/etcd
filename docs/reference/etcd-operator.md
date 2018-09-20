@@ -22,6 +22,7 @@
 
 ### SEE ALSO
 
+* [etcd-operator etcd-helper](etcd-operator_etcd-helper.md)	 - Run etcd helper
 * [etcd-operator run](etcd-operator_run.md)	 - Launch Etcd server
 * [etcd-operator version](etcd-operator_version.md)	 - Prints binary version number.
 
