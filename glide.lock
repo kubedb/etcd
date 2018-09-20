@@ -1,5 +1,5 @@
-hash: 0b6a9b31348e3a6d0dba67bc3aa73d3509616b88ec0d3ac2647db90b5c85f414
-updated: 2018-09-10T10:57:11.832957148-07:00
+hash: 420fd2b583d9fab92041bd3c08d8a4f348535d8f7eadb14637871f00888015c6
+updated: 2018-09-20T15:49:50.504369794+06:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -26,14 +26,14 @@ imports:
   - types
   - version
 - name: github.com/appscode/jsonpatch
-  version: 1359b374de83fa14fd58ab10aa8ea4935f84d249
+  version: 5af499cf01c842bfdd7761a433fc90525ccd6836
 - name: github.com/appscode/kubernetes-webhook-util
   version: cb010279d0a6d1885e6316f78cf3ef682fca7a42
   subpackages:
   - admission/v1beta1
   - registry/admissionreview/v1beta1
 - name: github.com/appscode/kutil
-  version: 6a61b0d2df81e2d5b4764bee574eb43a9a954a5a
+  version: bd70cefb33397b4c196aca7e33cab656755e195e
   subpackages:
   - apiextensions/v1beta1
   - core/v1
@@ -227,7 +227,7 @@ imports:
 - name: github.com/evanphx/json-patch
   version: 94e38aa1586e8a6c8a75770bddf5ff84c48a106b
 - name: github.com/fatih/structs
-  version: ebf56d35bba727c68ac77f56f2fcf90b181851aa
+  version: 4966fc68f5b7593aafa6cbbba2d65ec6e1416047
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-bongo/bongo
@@ -267,7 +267,7 @@ imports:
 - name: github.com/google/btree
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/go-cmp
-  version: 3af367b6b30c263d47e8895973edcca9a49cf029
+  version: 875f8df8b7965f1eac1098d36d677f807ac0b49e
   subpackages:
   - cmp
   - cmp/internal/diff
@@ -284,7 +284,7 @@ imports:
   - compiler
   - extensions
 - name: github.com/graymeta/stow
-  version: afce6d90444a3ba63c6d6671498c6cdc79375369
+  version: 1849a82ac7fbd3e5cb144bcc711544e90903eac4
   repo: https://github.com/appscode/stow.git
   vcs: git
   subpackages:
@@ -298,7 +298,7 @@ imports:
   subpackages:
   - diskcache
 - name: github.com/grpc-ecosystem/go-grpc-prometheus
-  version: c225b8c3b01faf2899099b768856a9e916e5087b
+  version: 2500245aa6110c562d17020fb31a2c133d737799
 - name: github.com/grpc-ecosystem/grpc-gateway
   version: 8cc3a55af3bcf171a1c23a90c4df9cf591706104
   subpackages:
@@ -306,7 +306,7 @@ imports:
   - runtime/internal
   - utilities
 - name: github.com/hashicorp/go-version
-  version: 0dcf3ac121c7c30e035b41ba9f652d1ce5994242
+  version: c31c76b6f31519811c054135438ccd7eee8c2401
   repo: https://github.com/appscode/go-version.git
   vcs: git
 - name: github.com/hashicorp/golang-lru
@@ -326,7 +326,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 1624edc4454b8682399def8740d46db5e4362ba4
 - name: github.com/kubedb/apimachinery
-  version: b708c5206e4e9fdb0753d18036b5b17dac5d8b5c
+  version: f334f54ca3a7f0681e952a243bab490b3f2cfbda
   subpackages:
   - apis/kubedb
   - apis/kubedb/v1alpha1
@@ -375,7 +375,7 @@ imports:
 - name: github.com/oleiade/reflections
   version: 0e86b3c98b2ff33e30c85cfe97d9a63d439fe7eb
 - name: github.com/onsi/ginkgo
-  version: fa5fabab2a1bfbd924faf4c067d07ae414e2aedf
+  version: 3774a09d95489ccaa16032e0770d08ea77ba6184
   subpackages:
   - config
   - internal/codelocation
@@ -453,7 +453,7 @@ imports:
   subpackages:
   - diffmatchpatch
 - name: github.com/sirupsen/logrus
-  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+  version: d26492970760ca5d33129d2d799e34be5c4782eb
 - name: github.com/spf13/cobra
   version: ef82de70bb3f60c65fb8eebacbb2d122ef517385
   subpackages:
@@ -535,7 +535,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/api
-  version: 7ca32eb868bf53ea2fc406698eb98583a8073d19
+  version: 19ff8768a5c0b8e46ea281065664787eefc24121
   subpackages:
   - gensupport
   - googleapi
@@ -693,7 +693,7 @@ imports:
   - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: 8573140a007810ee0d5a165647f171b0a77acfe5
+  version: dea48c5b25a85e0fa07fec5bd5b8ec8fcaae6653
   repo: https://github.com/pharmer/apiserver.git
   vcs: git
   subpackages:
@@ -949,7 +949,7 @@ imports:
   - util/retry
   - util/workqueue
 - name: k8s.io/kube-aggregator
-  version: bd6e1ad75c9758cad2069bb2f65880cf805ad8e9
+  version: 07bfdba27d43fe6b7eea965213b3aad555de2457
   subpackages:
   - pkg/apis/apiregistration
   - pkg/apis/apiregistration/v1
@@ -988,4 +988,15 @@ imports:
   vcs: git
   subpackages:
   - api/v1
-testImports: []
+testImports:
+- name: github.com/hpcloud/tail
+  version: a1dbeea552b7c8df4b542c66073e393de198a800
+  subpackages:
+  - ratelimiter
+  - util
+  - watch
+  - winfile
+- name: gopkg.in/fsnotify/fsnotify.v1
+  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
+- name: gopkg.in/tomb.v1
+  version: c131134a1947e9afd9cecfe11f4c6dff0732ae58
