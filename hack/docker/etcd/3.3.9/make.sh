@@ -27,7 +27,7 @@ build_docker() {
   cp "$DIST/etcd-operator/etcd-operator-alpine-amd64" etcd-operator
   chmod 755 etcd-operator
 
-  local cmd="docker build -t $DOCKER_REGISTRY/$IMG:$TAG ."
+  local cmd="docker build --pull -t $DOCKER_REGISTRY/$IMG:$TAG ."
   echo $cmd; $cmd
 
   rm etcd-operator
