@@ -82,7 +82,7 @@ func (a *EtcdMutator) Admit(req *admission.AdmissionRequest) *admission.Admissio
 	if err != nil {
 		return hookapi.StatusForbidden(err)
 	} else if etcdMod != nil {
-		patch, err := meta_util.CreateJSONPatch(obj, etcdMod)
+		patch, err := meta_util.CreateJSONPatch(req.Object.Raw, etcdMod)
 		if err != nil {
 			return hookapi.StatusInternalServerError(err)
 		}
