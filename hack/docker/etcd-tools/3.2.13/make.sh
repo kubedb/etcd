@@ -10,7 +10,7 @@ source "$REPO_ROOT/hack/libbuild/common/kubedb_image.sh"
 DOCKER_REGISTRY=${DOCKER_REGISTRY:-kubedb}
 IMG=etcd-tools
 TAG=3.2.13
-OSM_VER=${OSM_VER:-0.7.1}
+OSM_VER=${OSM_VER:-0.8.0}
 
 DIST="$REPO_ROOT/dist"
 mkdir -p "$DIST"
