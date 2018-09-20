@@ -4,10 +4,19 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
+	"k8s.io/client-go/discovery"
+	restclient "k8s.io/client-go/rest"
+
 	"github.com/appscode/go/log"
+	discovery_util "github.com/appscode/kutil/discovery"
+	shell "github.com/codeskyblue/go-sh"
+	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/etcd/pkg/cmds/server"
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,34 +24,65 @@ import (
 )
 
 var (
-	DockerRegistry string
-	ExporterTag    string
-	DBVersion      string
+	DockerRegistry     string
+	ExporterTag        string
+	DBVersion          string
+	SelfHostedOperator bool
 )
+
+func (f *Framework) isApiSvcReady(apiSvcName string) error {
+	apiSvc, err := f.kaClient.ApiregistrationV1beta1().APIServices().Get(apiSvcName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	for _, cond := range apiSvc.Status.Conditions {
+		if cond.Type == kApi.Available && cond.Status == kApi.ConditionTrue {
+			log.Infof("APIService %v status is true", apiSvcName)
+			return nil
+		}
+	}
+	log.Errorf("APIService %v not ready yet", apiSvcName)
+	return fmt.Errorf("APIService %v not ready yet", apiSvcName)
+}
 
 func (f *Framework) EventuallyAPIServiceReady() GomegaAsyncAssertion {
 	return Eventually(
 		func() error {
-			crd, err := f.kaClient.ApiregistrationV1beta1().APIServices().Get("v1alpha1.admission.kubedb.com", metav1.GetOptions{})
-			if err != nil {
+			if err := f.isApiSvcReady("v1alpha1.mutators.kubedb.com"); err != nil {
 				return err
 			}
-			for _, cond := range crd.Status.Conditions {
-				if cond.Type == kApi.Available && cond.Status == kApi.ConditionTrue {
-					log.Info("APIService status is true")
-					time.Sleep(time.Second * 3) // let the resource become available
-					return nil
-				}
+			if err := f.isApiSvcReady("v1alpha1.validators.kubedb.com"); err != nil {
+				return err
 			}
-			log.Error("APIService not ready yet")
-			return fmt.Errorf("APIService not ready yet")
+			time.Sleep(time.Second * 4) // let the resource become available
+			return nil
 		},
 		time.Minute*2,
 		time.Second*5,
 	)
 }
 
-func (f *Framework) RunOperatorAndServer(kubeconfigPath string, stopCh <-chan struct{}) {
+func (f *Framework) RunOperatorAndServer(config *restclient.Config, kubeconfigPath string, stopCh <-chan struct{}) {
+	// Check and set EnableStatusSubresource=true for >=kubernetes v1.11
+	// Todo: remove this part and set EnableStatusSubresource=true automatically when subresources is must in kubedb.
+	discClient, err := discovery.NewDiscoveryClientForConfig(config)
+	Expect(err).NotTo(HaveOccurred())
+	serverVersion, err := discovery_util.GetBaseVersion(discClient)
+	Expect(err).NotTo(HaveOccurred())
+	if strings.Compare(serverVersion, "1.11") >= 0 {
+		api.EnableStatusSubresource = true
+	}
+
+	sh := shell.NewSession()
+	args := []interface{}{"--minikube", fmt.Sprintf("--docker-registry=%v", DockerRegistry)}
+	SetupServer := filepath.Join("..", "..", "hack", "deploy", "setup.sh")
+
+	By("Creating API server and webhook stuffs")
+	cmd := sh.Command(SetupServer, args...)
+	err = cmd.Run()
+	Expect(err).ShouldNot(HaveOccurred())
+
+	By("Starting Server and Operator")
 	serverOpt := server.NewEtcdServerOptions(os.Stdout, os.Stderr)
 
 	serverOpt.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = kubeconfigPath
@@ -51,7 +91,7 @@ func (f *Framework) RunOperatorAndServer(kubeconfigPath string, stopCh <-chan st
 	serverOpt.RecommendedOptions.Authorization.RemoteKubeConfigFile = kubeconfigPath
 	serverOpt.RecommendedOptions.Authentication.RemoteKubeConfigFile = kubeconfigPath
 
-	err := serverOpt.Run(stopCh)
+	err = serverOpt.Run(stopCh)
 	Expect(err).NotTo(HaveOccurred())
 }
 

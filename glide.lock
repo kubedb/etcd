@@ -1,5 +1,5 @@
 hash: 420fd2b583d9fab92041bd3c08d8a4f348535d8f7eadb14637871f00888015c6
-updated: 2018-09-20T15:49:50.504369794+06:00
+updated: 2018-09-11T18:27:22.03350225+06:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -25,6 +25,8 @@ imports:
   - strings
   - types
   - version
+- name: github.com/appscode/go-version
+  version: 0dcf3ac121c7c30e035b41ba9f652d1ce5994242
 - name: github.com/appscode/jsonpatch
   version: 5af499cf01c842bfdd7761a433fc90525ccd6836
 - name: github.com/appscode/kubernetes-webhook-util
@@ -33,10 +35,11 @@ imports:
   - admission/v1beta1
   - registry/admissionreview/v1beta1
 - name: github.com/appscode/kutil
-  version: bd70cefb33397b4c196aca7e33cab656755e195e
+  version: 58a89a000f0c44560e97537d989ec6d2fba95f64
   subpackages:
   - apiextensions/v1beta1
   - core/v1
+  - discovery
   - dynamic
   - meta
   - rbac/v1beta1
@@ -101,6 +104,10 @@ imports:
   - quantile
 - name: github.com/cockroachdb/cmux
   version: 112f0506e7743d64a6eb8fedbcff13d9979bbf92
+- name: github.com/codegangsta/inject
+  version: 33e0aa1cb7c019ccc3fbe049a8262a6403d30504
+- name: github.com/codeskyblue/go-sh
+  version: cf804ac79dffabb6b16342e24362cc744afc144f
 - name: github.com/coreos/bbolt
   version: 48ea1b39c25fc1bab3506fbc712ecbaa842c4d2d
 - name: github.com/coreos/etcd
@@ -267,7 +274,7 @@ imports:
 - name: github.com/google/btree
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/go-cmp
-  version: 875f8df8b7965f1eac1098d36d677f807ac0b49e
+  version: 2006917edc5a27cd174dbc4baba31a137d6cb9ff
   subpackages:
   - cmp
   - cmp/internal/diff
@@ -326,7 +333,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 1624edc4454b8682399def8740d46db5e4362ba4
 - name: github.com/kubedb/apimachinery
-  version: f334f54ca3a7f0681e952a243bab490b3f2cfbda
+  version: e40747156f300904d4e1276180d6d37d409e96c9
   subpackages:
   - apis/kubedb
   - apis/kubedb/v1alpha1

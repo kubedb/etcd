@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/appscode/go/types"
+	"github.com/appscode/go/log"
 	meta_util "github.com/appscode/kutil/meta"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/etcd/test/e2e/framework"
@@ -12,46 +12,63 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-)
-
-const (
-	S3_BUCKET_NAME       = "S3_BUCKET_NAME"
-	GCS_BUCKET_NAME      = "GCS_BUCKET_NAME"
-	AZURE_CONTAINER_NAME = "AZURE_CONTAINER_NAME"
-	SWIFT_CONTAINER_NAME = "SWIFT_CONTAINER_NAME"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
+	store "kmodules.xyz/objectstore-api/api/v1"
 )
 
 var _ = Describe("Etcd", func() {
 	var (
-		err         error
-		f           *framework.Invocation
-		etcd        *api.Etcd
-		snapshot    *api.Snapshot
-		secret      *core.Secret
-		skipMessage string
+		err           error
+		f             *framework.Invocation
+		etcd          *api.Etcd
+		garbageEtcd   *api.EtcdList
+		etcdVersion   *api.EtcdVersion
+		snapshot      *api.Snapshot
+		secret        *core.Secret
+		skipMessage   string
+		skipDataCheck bool
 	)
 
 	BeforeEach(func() {
 		f = root.Invoke()
 		etcd = f.Etcd()
+		garbageEtcd = new(api.EtcdList)
 		snapshot = f.Snapshot()
+		etcdVersion = f.EtcdVersion()
 		skipMessage = ""
 	})
 
 	var createAndWaitForRunning = func() {
+		By("Ensuring EtcdVersion crd")
+		err := f.CreateEtcdVersion(etcdVersion)
+		Expect(err).NotTo(HaveOccurred())
+
 		By("Create Etcd: " + etcd.Name)
 		err = f.CreateEtcd(etcd)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Wait for Running etcd")
 		f.EventuallyEtcdRunning(etcd.ObjectMeta).Should(BeTrue())
+
+		By("Waiting for database to be ready")
+		f.EventuallyDatabaseReady(etcd.ObjectMeta).Should(BeTrue())
 	}
 
 	var deleteTestResource = func() {
+		if etcd == nil {
+			log.Infoln("Skipping cleanup. Reason: etcd is nil.")
+			return
+		}
+
 		By("Delete etcd")
 		err = f.DeleteEtcd(etcd.ObjectMeta)
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			if kerr.IsNotFound(err) {
+				log.Infof("Skipping rest of the cleanup. Reason: Etcd  %s not found", etcd.Name)
+				return
+			}
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		By("Wait for etcd to be paused")
 		f.EventuallyDormantDatabaseStatus(etcd.ObjectMeta).Should(matcher.HavePaused())
@@ -71,32 +88,37 @@ var _ = Describe("Etcd", func() {
 		f.EventuallyWipedOut(etcd.ObjectMeta).Should(Succeed())
 	}
 
-	var shouldSuccessfullyRunning = func() {
-		if skipMessage != "" {
-			Skip(skipMessage)
-		}
-
-		// Create Etcd
-		createAndWaitForRunning()
-
+	AfterEach(func() {
 		// Delete test resource
 		deleteTestResource()
-	}
+
+		for _, et := range garbageEtcd.Items {
+			*etcd = et
+			// Delete test resource
+			deleteTestResource()
+		}
+
+		if !skipDataCheck {
+			By("Check for snapshot data")
+			f.EventuallySnapshotDataFound(snapshot).Should(BeFalse())
+		}
+
+		if secret != nil {
+			f.DeleteSecret(secret.ObjectMeta)
+		}
+
+		err = f.DeleteEtcdVersion(etcdVersion.ObjectMeta)
+		if err != nil && !kerr.IsNotFound(err) {
+			Expect(err).NotTo(HaveOccurred())
+		}
+	})
 
 	Describe("Test", func() {
 		BeforeEach(func() {
 			if f.StorageClass == "" {
 				Skip("Missing StorageClassName. Provide as flag to test this.")
 			}
-			etcd.Spec.Storage = &core.PersistentVolumeClaimSpec{
-				Resources: core.ResourceRequirements{
-					Requests: core.ResourceList{
-						core.ResourceStorage: resource.MustParse("1Gi"),
-					},
-				},
-				StorageClassName: types.StringP(f.StorageClass),
-			}
-
+			etcd.Spec.Storage = f.EtcdPVCSpec()
 		})
 
 		Context("General", func() {
@@ -105,7 +127,7 @@ var _ = Describe("Etcd", func() {
 				BeforeEach(func() {
 					etcd.Spec.Storage = nil
 				})
-				It("should run successfully", shouldSuccessfullyRunning)
+				It("should run successfully", createAndWaitForRunning)
 			})
 
 			Context("With PVC", func() {
@@ -113,7 +135,7 @@ var _ = Describe("Etcd", func() {
 					if skipMessage != "" {
 						Skip(skipMessage)
 					}
-					// Create MySQL
+					// Create Etcd
 					createAndWaitForRunning()
 
 					By("Insert Document Inside DB")
@@ -142,8 +164,6 @@ var _ = Describe("Etcd", func() {
 
 					By("Checking Inserted Document")
 					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
-
-					deleteTestResource()
 				})
 			})
 		})
@@ -172,14 +192,10 @@ var _ = Describe("Etcd", func() {
 					in.Spec.DoNotPause = false
 					return in
 				})
-
-				// Delete test resource
-				deleteTestResource()
 			})
 		})
 
 		Context("Snapshot", func() {
-			var skipDataCheck bool
 
 			AfterEach(func() {
 				f.DeleteSecret(secret.ObjectMeta)
@@ -204,19 +220,6 @@ var _ = Describe("Etcd", func() {
 
 				By("Check for Succeeded snapshot")
 				f.EventuallySnapshotPhase(snapshot.ObjectMeta).Should(Equal(api.SnapshotPhaseSucceeded))
-
-				if !skipDataCheck {
-					By("Check for snapshot data")
-					f.EventuallySnapshotDataFound(snapshot).Should(BeTrue())
-				}
-
-				// Delete test resource
-				deleteTestResource()
-
-				if !skipDataCheck {
-					By("Check for snapshot data")
-					f.EventuallySnapshotDataFound(snapshot).Should(BeFalse())
-				}
 			}
 
 			Context("In Local", func() {
@@ -224,15 +227,46 @@ var _ = Describe("Etcd", func() {
 					skipDataCheck = true
 					secret = f.SecretForLocalBackend()
 					snapshot.Spec.StorageSecretName = secret.Name
-					snapshot.Spec.Local = &api.LocalSpec{
-						MountPath: "/repo",
-						VolumeSource: core.VolumeSource{
-							EmptyDir: &core.EmptyDirVolumeSource{},
-						},
-					}
+					snapshot.Spec.Local = f.LocalStorageSpec()
 				})
 
-				It("should take Snapshot successfully", shouldTakeSnapshot)
+				Context("With EmptyDir as Snapshot's backend", func() {
+
+					It("should take Snapshot successfully", shouldTakeSnapshot)
+				})
+
+				Context("With PVC as Snapshot's backend", func() {
+					var snapPVC *core.PersistentVolumeClaim
+
+					BeforeEach(func() {
+						snapPVC = f.GetPersistentVolumeClaim()
+						err := f.CreatePersistentVolumeClaim(snapPVC)
+						Expect(err).NotTo(HaveOccurred())
+
+						snapshot.Spec.Local = &store.LocalSpec{
+							MountPath: "/repo",
+							VolumeSource: core.VolumeSource{
+								PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{
+									ClaimName: snapPVC.Name,
+								},
+							},
+						}
+					})
+
+					AfterEach(func() {
+						f.DeletePersistentVolumeClaim(snapPVC.ObjectMeta)
+					})
+
+					It("should delete Snapshot successfully", func() {
+						shouldTakeSnapshot()
+
+						By("Deleting Snapshot")
+						f.DeleteSnapshot(snapshot.ObjectMeta)
+
+						By("Waiting Snapshot to be deleted")
+						f.EventuallySnapshot(snapshot.ObjectMeta).Should(BeFalse())
+					})
+				})
 
 				// Additional
 				Context("Without PVC", func() {
@@ -247,8 +281,8 @@ var _ = Describe("Etcd", func() {
 				BeforeEach(func() {
 					secret = f.SecretForS3Backend()
 					snapshot.Spec.StorageSecretName = secret.Name
-					snapshot.Spec.S3 = &api.S3Spec{
-						Bucket: os.Getenv(S3_BUCKET_NAME),
+					snapshot.Spec.S3 = &store.S3Spec{
+						Bucket: os.Getenv(framework.S3_BUCKET_NAME),
 					}
 				})
 
@@ -259,8 +293,8 @@ var _ = Describe("Etcd", func() {
 				BeforeEach(func() {
 					secret = f.SecretForGCSBackend()
 					snapshot.Spec.StorageSecretName = secret.Name
-					snapshot.Spec.GCS = &api.GCSSpec{
-						Bucket: os.Getenv(GCS_BUCKET_NAME),
+					snapshot.Spec.GCS = &store.GCSSpec{
+						Bucket: os.Getenv(framework.GCS_BUCKET_NAME),
 					}
 				})
 
@@ -325,8 +359,8 @@ var _ = Describe("Etcd", func() {
 						snapshot := f.Snapshot()
 						snapshot.Spec.DatabaseName = etcd.Name
 						snapshot.Spec.StorageSecretName = secret.Name
-						snapshot.Spec.GCS = &api.GCSSpec{
-							Bucket: os.Getenv(GCS_BUCKET_NAME),
+						snapshot.Spec.GCS = &store.GCSSpec{
+							Bucket: os.Getenv(framework.GCS_BUCKET_NAME),
 						}
 
 						By("Create Snapshot")
@@ -362,14 +396,6 @@ var _ = Describe("Etcd", func() {
 							By(fmt.Sprintf("Check for old snapshot %v data", snapshot.Name))
 							f.EventuallySnapshotDataFound(snapshot).Should(BeTrue())
 						}
-
-						// Delete test resource
-						deleteTestResource()
-
-						if !skipDataCheck {
-							By("Check for snapshot data")
-							f.EventuallySnapshotDataFound(snapshot).Should(BeFalse())
-						}
 					})
 				})
 
@@ -379,8 +405,8 @@ var _ = Describe("Etcd", func() {
 				BeforeEach(func() {
 					secret = f.SecretForAzureBackend()
 					snapshot.Spec.StorageSecretName = secret.Name
-					snapshot.Spec.Azure = &api.AzureSpec{
-						Container: os.Getenv(AZURE_CONTAINER_NAME),
+					snapshot.Spec.Azure = &store.AzureSpec{
+						Container: os.Getenv(framework.AZURE_CONTAINER_NAME),
 					}
 				})
 
@@ -391,8 +417,8 @@ var _ = Describe("Etcd", func() {
 				BeforeEach(func() {
 					secret = f.SecretForSwiftBackend()
 					snapshot.Spec.StorageSecretName = secret.Name
-					snapshot.Spec.Swift = &api.SwiftSpec{
-						Container: os.Getenv(SWIFT_CONTAINER_NAME),
+					snapshot.Spec.Swift = &store.SwiftSpec{
+						Container: os.Getenv(framework.SWIFT_CONTAINER_NAME),
 					}
 				})
 
@@ -421,9 +447,6 @@ var _ = Describe("Etcd", func() {
 
 					By("Checking Inserted Document")
 					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
-
-					// Delete test resource
-					deleteTestResource()
 				})
 
 			})
@@ -436,8 +459,8 @@ var _ = Describe("Etcd", func() {
 				BeforeEach(func() {
 					secret = f.SecretForGCSBackend()
 					snapshot.Spec.StorageSecretName = secret.Name
-					snapshot.Spec.GCS = &api.GCSSpec{
-						Bucket: os.Getenv(GCS_BUCKET_NAME),
+					snapshot.Spec.GCS = &store.GCSSpec{
+						Bucket: os.Getenv(framework.GCS_BUCKET_NAME),
 					}
 					snapshot.Spec.DatabaseName = etcd.Name
 				})
@@ -467,17 +490,13 @@ var _ = Describe("Etcd", func() {
 					oldEtcd, err := f.GetEtcd(etcd.ObjectMeta)
 					Expect(err).NotTo(HaveOccurred())
 
+					// insert oldEtcd into garbage list so that it's resources can be cleaned after test
+					garbageEtcd.Items = append(garbageEtcd.Items, *oldEtcd)
+
 					By("Create etcd from snapshot")
 					etcd = f.Etcd()
 					if f.StorageClass != "" {
-						etcd.Spec.Storage = &core.PersistentVolumeClaimSpec{
-							Resources: core.ResourceRequirements{
-								Requests: core.ResourceList{
-									core.ResourceStorage: resource.MustParse("1Gi"),
-								},
-							},
-							StorageClassName: types.StringP(f.StorageClass),
-						}
+						etcd.Spec.Storage = f.EtcdPVCSpec()
 					}
 					etcd.Spec.Init = &api.InitSpec{
 						SnapshotSource: &api.SnapshotSourceSpec{
@@ -491,23 +510,11 @@ var _ = Describe("Etcd", func() {
 
 					By("Checking Inserted Document")
 					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
-
-					// Delete test resource
-					deleteTestResource()
-					etcd = oldEtcd
-					// Delete test resource
-					deleteTestResource()
 				})
 			})
 		})
 
 		Context("Resume", func() {
-			var usedInitScript bool
-			var usedInitSnapshot bool
-			BeforeEach(func() {
-				usedInitScript = false
-				usedInitSnapshot = false
-			})
 
 			Context("Super Fast User - Create-Delete-Create-Delete-Create ", func() {
 				It("should resume DormantDatabase successfully", func() {
@@ -553,9 +560,6 @@ var _ = Describe("Etcd", func() {
 
 					_, err = f.GetEtcd(etcd.ObjectMeta)
 					Expect(err).NotTo(HaveOccurred())
-
-					// Delete test resource
-					deleteTestResource()
 				})
 			})
 
@@ -590,18 +594,11 @@ var _ = Describe("Etcd", func() {
 
 					By("Checking Inserted Document")
 					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
-
-					_, err = f.GetEtcd(etcd.ObjectMeta)
-					Expect(err).NotTo(HaveOccurred())
-
-					// Delete test resource
-					deleteTestResource()
 				})
 			})
 
 			Context("with init Script", func() {
 				BeforeEach(func() {
-					usedInitScript = true
 					etcd.Spec.Init = &api.InitSpec{
 						ScriptSource: &api.ScriptSourceSpec{
 							VolumeSource: core.VolumeSource{
@@ -642,34 +639,25 @@ var _ = Describe("Etcd", func() {
 					By("Checking Inserted Document")
 					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
 
-					_, err := f.GetEtcd(etcd.ObjectMeta)
+					etcd, err := f.GetEtcd(etcd.ObjectMeta)
 					Expect(err).NotTo(HaveOccurred())
 
-					// Delete test resource
-					deleteTestResource()
-					if usedInitScript {
-						Expect(etcd.Spec.Init).ShouldNot(BeNil())
-						if usedInitScript {
-							Expect(etcd.Spec.Init).ShouldNot(BeNil())
-							_, err := meta_util.GetString(etcd.Annotations, api.AnnotationInitialized)
-							Expect(err).To(HaveOccurred())
-						}
-					}
+					By("Checking etcd does not have kubedb.com/initialized annotation")
+					_, err = meta_util.GetString(etcd.Annotations, api.AnnotationInitialized)
+					Expect(err).To(HaveOccurred())
 				})
 			})
 
 			Context("With Snapshot Init", func() {
-				var skipDataCheck bool
 				AfterEach(func() {
 					f.DeleteSecret(secret.ObjectMeta)
 				})
 				BeforeEach(func() {
 					skipDataCheck = false
-					usedInitSnapshot = true
 					secret = f.SecretForGCSBackend()
 					snapshot.Spec.StorageSecretName = secret.Name
-					snapshot.Spec.GCS = &api.GCSSpec{
-						Bucket: os.Getenv(GCS_BUCKET_NAME),
+					snapshot.Spec.GCS = &store.GCSSpec{
+						Bucket: os.Getenv(framework.GCS_BUCKET_NAME),
 					}
 					snapshot.Spec.DatabaseName = etcd.Name
 				})
@@ -698,18 +686,15 @@ var _ = Describe("Etcd", func() {
 					oldEtcd, err := f.GetEtcd(etcd.ObjectMeta)
 					Expect(err).NotTo(HaveOccurred())
 
+					// insert oldEtcd into garbage list so that it's resources can be cleaned after test
+					garbageEtcd.Items = append(garbageEtcd.Items, *oldEtcd)
+
 					By("Create etcd from snapshot")
 					etcd = f.Etcd()
 					if f.StorageClass != "" {
-						etcd.Spec.Storage = &core.PersistentVolumeClaimSpec{
-							Resources: core.ResourceRequirements{
-								Requests: core.ResourceList{
-									core.ResourceStorage: resource.MustParse("1Gi"),
-								},
-							},
-							StorageClassName: types.StringP(f.StorageClass),
-						}
+						etcd.Spec.Storage = f.EtcdPVCSpec()
 					}
+
 					etcd.Spec.Init = &api.InitSpec{
 						SnapshotSource: &api.SnapshotSourceSpec{
 							Namespace: snapshot.Namespace,
@@ -747,27 +732,14 @@ var _ = Describe("Etcd", func() {
 					By("Checking Inserted Document")
 					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
 
-					if usedInitSnapshot {
-						Expect(etcd.Spec.Init).ShouldNot(BeNil())
-						_, err := meta_util.GetString(etcd.Annotations, api.AnnotationInitialized)
-						Expect(err).NotTo(HaveOccurred())
-					}
-
-					// Delete test resource
-					deleteTestResource()
-					etcd = oldEtcd
-					// Delete test resource
-					deleteTestResource()
-					if !skipDataCheck {
-						By("Check for snapshot data")
-						f.EventuallySnapshotDataFound(snapshot).Should(BeFalse())
-					}
+					By("Checking Etcd has kubedb.com/initialized annotation")
+					_, err = meta_util.GetString(etcd.Annotations, api.AnnotationInitialized)
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
 			Context("Multiple times with init script", func() {
 				BeforeEach(func() {
-					usedInitScript = true
 					etcd.Spec.Init = &api.InitSpec{
 						ScriptSource: &api.ScriptSourceSpec{
 							VolumeSource: core.VolumeSource{
@@ -813,15 +785,10 @@ var _ = Describe("Etcd", func() {
 						By("Checking Inserted Document")
 						f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
 
-						if usedInitScript {
-							Expect(etcd.Spec.Init).ShouldNot(BeNil())
-							_, err := meta_util.GetString(etcd.Annotations, api.AnnotationInitialized)
-							Expect(err).To(HaveOccurred())
-						}
+						By("Checking etcd does not have kubedb.com/initialized annotation")
+						_, err = meta_util.GetString(etcd.Annotations, api.AnnotationInitialized)
+						Expect(err).To(HaveOccurred())
 					}
-
-					// Delete test resource
-					deleteTestResource()
 				})
 			})
 
@@ -853,45 +820,24 @@ var _ = Describe("Etcd", func() {
 
 					By("Verify multiple Succeeded Snapshot")
 					f.EventuallyMultipleSnapshotFinishedProcessing(etcd.ObjectMeta).Should(Succeed())
-
-					deleteTestResource()
 				}
 
 				Context("with local", func() {
 					BeforeEach(func() {
 						secret = f.SecretForLocalBackend()
-						etcd.Spec.BackupSchedule = &api.BackupScheduleSpec{
-							CronExpression: "@every 1m",
-							Backend: api.Backend{
-								StorageSecretName: secret.Name,
-								Local: &api.LocalSpec{
-									MountPath: "/repo",
-									VolumeSource: core.VolumeSource{
-										EmptyDir: &core.EmptyDirVolumeSource{},
-									},
-								},
-							},
-						}
+						etcd.Spec.BackupSchedule = f.LocalBackupScheduleSpec(secret.Name)
 					})
 
-					It("should run schedular successfully", shouldStartupSchedular)
+					It("should run scheduler successfully", shouldStartupSchedular)
 				})
 
 				Context("with GCS and PVC", func() {
 					BeforeEach(func() {
 						secret = f.SecretForGCSBackend()
-						etcd.Spec.BackupSchedule = &api.BackupScheduleSpec{
-							CronExpression: "@every 1m",
-							Backend: api.Backend{
-								StorageSecretName: secret.Name,
-								GCS: &api.GCSSpec{
-									Bucket: os.Getenv(GCS_BUCKET_NAME),
-								},
-							},
-						}
+						etcd.Spec.BackupSchedule = f.GCSBackupScheduleSpec(secret.Name)
 					})
 
-					It("should run schedular successfully", shouldStartupSchedular)
+					It("should run scheduler successfully", shouldStartupSchedular)
 				})
 			})
 
@@ -899,7 +845,7 @@ var _ = Describe("Etcd", func() {
 				BeforeEach(func() {
 					secret = f.SecretForLocalBackend()
 				})
-				It("should run schedular successfully", func() {
+				It("should run scheduler successfully", func() {
 					// Create and wait for running Etcd
 					createAndWaitForRunning()
 
@@ -908,19 +854,7 @@ var _ = Describe("Etcd", func() {
 
 					By("Update etcd")
 					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *api.Etcd) *api.Etcd {
-						in.Spec.BackupSchedule = &api.BackupScheduleSpec{
-							CronExpression: "@every 1m",
-							Backend: api.Backend{
-								StorageSecretName: secret.Name,
-								Local: &api.LocalSpec{
-									MountPath: "/repo",
-									VolumeSource: core.VolumeSource{
-										EmptyDir: &core.EmptyDirVolumeSource{},
-									},
-								},
-							},
-						}
-
+						in.Spec.BackupSchedule = f.LocalBackupScheduleSpec(secret.Name)
 						return in
 					})
 					Expect(err).NotTo(HaveOccurred())
@@ -937,8 +871,6 @@ var _ = Describe("Etcd", func() {
 
 					By("Verify multiple Succeeded Snapshot")
 					f.EventuallyMultipleSnapshotFinishedProcessing(etcd.ObjectMeta).Should(Succeed())
-
-					deleteTestResource()
 				})
 			})
 
@@ -955,18 +887,7 @@ var _ = Describe("Etcd", func() {
 
 					By("Update etcd")
 					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *api.Etcd) *api.Etcd {
-						in.Spec.BackupSchedule = &api.BackupScheduleSpec{
-							CronExpression: "@every 1m",
-							Backend: api.Backend{
-								StorageSecretName: secret.Name,
-								Local: &api.LocalSpec{
-									MountPath: "/repo",
-									VolumeSource: core.VolumeSource{
-										EmptyDir: &core.EmptyDirVolumeSource{},
-									},
-								},
-							},
-						}
+						in.Spec.BackupSchedule = f.LocalBackupScheduleSpec(secret.Name)
 						return in
 					})
 					Expect(err).NotTo(HaveOccurred())
@@ -1013,8 +934,6 @@ var _ = Describe("Etcd", func() {
 
 					By("Verify multiple Succeeded Snapshot")
 					f.EventuallyMultipleSnapshotFinishedProcessing(etcd.ObjectMeta).Should(Succeed())
-
-					deleteTestResource()
 				})
 			})
 		})

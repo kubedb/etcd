@@ -38,6 +38,7 @@ func init() {
 	flag.StringVar(&framework.DockerRegistry, "docker-registry", "kubedb", "User provided docker repository")
 	flag.StringVar(&framework.DBVersion, "etcd-version", "3.2.13", "Etcd version")
 	flag.StringVar(&framework.ExporterTag, "exporter-tag", "canary", "Tag of kubedb/operator used as exporter")
+	flag.BoolVar(&framework.SelfHostedOperator, "selfhosted-operator", false, "Enable this for provided controller")
 }
 
 const (
@@ -88,8 +89,10 @@ var _ = BeforeSuite(func() {
 	err = root.CreateNamespace()
 	Expect(err).NotTo(HaveOccurred())
 
-	stopCh := genericapiserver.SetupSignalHandler()
-	go root.RunOperatorAndServer(kubeconfigPath, stopCh)
+	if !framework.SelfHostedOperator {
+		stopCh := genericapiserver.SetupSignalHandler()
+		go root.RunOperatorAndServer(config, kubeconfigPath, stopCh)
+	}
 
 	root.EventuallyCRD().Should(Succeed())
 	root.EventuallyAPIServiceReady().Should(Succeed())
@@ -97,10 +100,11 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 
-	By("Cleanup Left Overs")
+	if !framework.SelfHostedOperator {
+		By("Deleting Admission Controller Configs")
+		root.CleanAdmissionConfigs()
+	}
 
-	By("Delete Admission Controller Configs")
-	root.CleanAdmissionConfigs()
 	By("Delete left over Etcd objects")
 	root.CleanEtcd()
 	By("Delete left over Dormant Database objects")
