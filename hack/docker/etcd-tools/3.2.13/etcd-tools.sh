@@ -72,6 +72,10 @@ while test $# -gt 0; do
       export ENABLE_ANALYTICS=$(echo $1 | sed -e 's/^[^=]*=//g')
       shift
       ;;
+    --)
+      shift
+      break
+      ;;
     *)
       show_help
       exit 1
@@ -87,7 +91,7 @@ fi
 # Wait for etcd to start
 # ref: http://unix.stackexchange.com/a/5279
 if [ "$op" = "backup" ]; then
-  while ! nc -z  $DB_HOST $DB_PORT </dev/null; do
+  while ! nc -z $DB_HOST $DB_PORT </dev/null; do
     echo "Waiting... database is not ready yet"
     sleep 5
   done
@@ -100,12 +104,12 @@ rm -rf *
 
 case "$op" in
   backup)
-    ETCDCTL_API=3 etcdctl --endpoints=http://$DB_HOST:$DB_PORT snapshot save $DB_DATA_DIR//$DB_SNAPSHOT
+    ETCDCTL_API=3 etcdctl --endpoints=http://$DB_HOST:$DB_PORT snapshot save $DB_DATA_DIR//$DB_SNAPSHOT "$@"
     osm push --enable-analytics="$ENABLE_ANALYTICS" --osmconfig="$OSM_CONFIG_FILE" -c "$DB_BUCKET" "$DB_DATA_DIR" "$DB_FOLDER/$DB_SNAPSHOT"
     ;;
   restore)
     osm pull --enable-analytics="$ENABLE_ANALYTICS" --osmconfig="$OSM_CONFIG_FILE" -c "$DB_BUCKET" "$DB_FOLDER/$DB_SNAPSHOT" "$DB_DATA_DIR"
-#    etcdrestore --host "$DB_HOST" --port $DB_PORT --username "$DB_USER" --password "$DB_PASSWORD" "$DB_DATA_DIR"
+    # etcdrestore --host "$DB_HOST" --port $DB_PORT --username "$DB_USER" --password "$DB_PASSWORD" "$DB_DATA_DIR"
     ;;
   *)
     (10)
