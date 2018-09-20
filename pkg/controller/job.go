@@ -56,7 +56,7 @@ func (c *Controller) getRestoreContainer(etcd *api.Etcd, snapshot *api.Snapshot,
 
 	containers = append(containers, core.Container{
 		Name:  api.JobTypeRestore,
-		Image: etcdVersion.Spec.DB.Image,
+		Image: etcdVersion.Spec.Tools.Image,
 		Args: meta_util.UpsertArgumentList([]string{
 			api.JobTypeRestore,
 			fmt.Sprintf(`--host=%s`, endpoints),

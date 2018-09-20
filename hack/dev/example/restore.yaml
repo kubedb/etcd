@@ -15,5 +15,5 @@ spec:
         storage: 1Gi
   init:
     snapshotSource:
-      name: snapshot-et
+      name: snapshot-etcd
       namespace: demo

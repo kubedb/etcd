@@ -2,6 +2,7 @@ package server
 
 import (
 	"flag"
+	"k8s.io/client-go/dynamic"
 	"time"
 
 	"github.com/appscode/kutil/meta"
@@ -72,7 +73,6 @@ func (s *ExtraOptions) AddGoFlags(fs *flag.FlagSet) {
 	fs.Var(&s.PrometheusCrdKinds, "prometheus-crd-kinds", " - EXPERIMENTAL (could be removed in future releases) - customize CRD kind names")
 
 	fs.BoolVar(&api.EnableStatusSubresource, "enable-status-subresource", api.EnableStatusSubresource, "If true, uses sub resource for Voyager crds.")
-
 }
 
 func (s *ExtraOptions) AddFlags(fs *pflag.FlagSet) {
@@ -102,6 +102,9 @@ func (s *ExtraOptions) ApplyTo(cfg *controller.OperatorConfig) error {
 		return err
 	}
 	if cfg.DBClient, err = cs.NewForConfig(cfg.ClientConfig); err != nil {
+		return err
+	}
+	if cfg.DynamicClient, err = dynamic.NewForConfig(cfg.ClientConfig); err != nil {
 		return err
 	}
 	if cfg.PromClient, err = prom.NewForConfig(&s.PrometheusCrdKinds, s.PrometheusCrdGroup, cfg.ClientConfig); err != nil {

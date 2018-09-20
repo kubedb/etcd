@@ -8,9 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/client-go/discovery"
-	restclient "k8s.io/client-go/rest"
-
 	"github.com/appscode/go/log"
 	discovery_util "github.com/appscode/kutil/discovery"
 	shell "github.com/codeskyblue/go-sh"
@@ -20,6 +17,8 @@ import (
 	. "github.com/onsi/gomega"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
+	restclient "k8s.io/client-go/rest"
 	kApi "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 )
 
