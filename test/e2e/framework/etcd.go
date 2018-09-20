@@ -23,7 +23,7 @@ func (f *Invocation) Etcd() *api.Etcd {
 			},
 		},
 		Spec: api.EtcdSpec{
-			Version: types.StrYo("3.6"),
+			Version: types.StrYo(DBVersion),
 		},
 	}
 }
