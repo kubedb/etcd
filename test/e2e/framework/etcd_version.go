@@ -3,7 +3,7 @@ package framework
 import (
 	"fmt"
 
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
+	api "github.com/kubedb/apimachinery/apis/catalog/v1alpha1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -32,7 +32,7 @@ func (i *Invocation) EtcdVersion() *api.EtcdVersion {
 }
 
 func (f *Framework) CreateEtcdVersion(obj *api.EtcdVersion) error {
-	_, err := f.extClient.EtcdVersions().Create(obj)
+	_, err := f.extClient.CatalogV1alpha1().EtcdVersions().Create(obj)
 	if err != nil && !kerr.IsAlreadyExists(err) {
 		return err
 	}
@@ -40,5 +40,5 @@ func (f *Framework) CreateEtcdVersion(obj *api.EtcdVersion) error {
 }
 
 func (f *Framework) DeleteEtcdVersion(meta metav1.ObjectMeta) error {
-	return f.extClient.EtcdVersions().Delete(meta.Name, &metav1.DeleteOptions{})
+	return f.extClient.CatalogV1alpha1().EtcdVersions().Delete(meta.Name, &metav1.DeleteOptions{})
 }
