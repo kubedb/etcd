@@ -6,10 +6,12 @@ import (
 
 	"github.com/appscode/go/types"
 	"github.com/appscode/kutil/meta"
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
+	catalogapi "github.com/kubedb/apimachinery/apis/catalog/v1alpha1"
+	dbapi "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	extFake "github.com/kubedb/apimachinery/client/clientset/versioned/fake"
 	"github.com/kubedb/apimachinery/client/clientset/versioned/scheme"
 	admission "k8s.io/api/admission/v1beta1"
+	apps "k8s.io/api/apps/v1"
 	authenticationV1 "k8s.io/api/authentication/v1"
 	core "k8s.io/api/core/v1"
 	storageV1beta1 "k8s.io/api/storage/v1beta1"
@@ -27,9 +29,9 @@ func init() {
 }
 
 var requestKind = metaV1.GroupVersionKind{
-	Group:   api.SchemeGroupVersion.Group,
-	Version: api.SchemeGroupVersion.Version,
-	Kind:    api.ResourceKindEtcd,
+	Group:   dbapi.SchemeGroupVersion.Group,
+	Version: dbapi.SchemeGroupVersion.Version,
+	Kind:    dbapi.ResourceKindEtcd,
 }
 
 func TestEtcdValidator_Admit(t *testing.T) {
@@ -39,7 +41,7 @@ func TestEtcdValidator_Admit(t *testing.T) {
 
 			validator.initialized = true
 			validator.extClient = extFake.NewSimpleClientset(
-				&api.EtcdVersion{
+				&catalogapi.EtcdVersion{
 					ObjectMeta: metaV1.ObjectMeta{
 						Name: "3.2.13",
 					},
@@ -59,11 +61,11 @@ func TestEtcdValidator_Admit(t *testing.T) {
 				},
 			)
 
-			objJS, err := meta.MarshalToJson(&c.object, api.SchemeGroupVersion)
+			objJS, err := meta.MarshalToJson(&c.object, dbapi.SchemeGroupVersion)
 			if err != nil {
 				panic(err)
 			}
-			oldObjJS, err := meta.MarshalToJson(&c.oldObject, api.SchemeGroupVersion)
+			oldObjJS, err := meta.MarshalToJson(&c.oldObject, dbapi.SchemeGroupVersion)
 			if err != nil {
 				panic(err)
 			}
@@ -111,8 +113,8 @@ var cases = []struct {
 	objectName string
 	namespace  string
 	operation  admission.Operation
-	object     api.Etcd
-	oldObject  api.Etcd
+	object     dbapi.Etcd
+	oldObject  dbapi.Etcd
 	heatUp     bool
 	result     bool
 }{
@@ -122,7 +124,7 @@ var cases = []struct {
 		"default",
 		admission.Create,
 		sampleEtcd(),
-		api.Etcd{},
+		dbapi.Etcd{},
 		false,
 		true,
 	},
@@ -132,7 +134,7 @@ var cases = []struct {
 		"default",
 		admission.Create,
 		getAwkwardEtcd(),
-		api.Etcd{},
+		dbapi.Etcd{},
 		false,
 		false,
 	},
@@ -202,7 +204,7 @@ var cases = []struct {
 		"default",
 		admission.Delete,
 		sampleEtcd(),
-		api.Etcd{},
+		dbapi.Etcd{},
 		true,
 		false,
 	},
@@ -212,7 +214,7 @@ var cases = []struct {
 		"default",
 		admission.Delete,
 		editSpecDoNotPause(sampleEtcd()),
-		api.Etcd{},
+		dbapi.Etcd{},
 		true,
 		true,
 	},
@@ -221,31 +223,31 @@ var cases = []struct {
 		"foo",
 		"default",
 		admission.Delete,
-		api.Etcd{},
-		api.Etcd{},
+		dbapi.Etcd{},
+		dbapi.Etcd{},
 		false,
 		true,
 	},
 }
 
-func sampleEtcd() api.Etcd {
-	return api.Etcd{
+func sampleEtcd() dbapi.Etcd {
+	return dbapi.Etcd{
 		TypeMeta: metaV1.TypeMeta{
-			Kind:       api.ResourceKindEtcd,
-			APIVersion: api.SchemeGroupVersion.String(),
+			Kind:       dbapi.ResourceKindEtcd,
+			APIVersion: dbapi.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metaV1.ObjectMeta{
 			Name:      "foo",
 			Namespace: "default",
 			Labels: map[string]string{
-				api.LabelDatabaseKind: api.ResourceKindEtcd,
+				dbapi.LabelDatabaseKind: dbapi.ResourceKindEtcd,
 			},
 		},
-		Spec: api.EtcdSpec{
+		Spec: dbapi.EtcdSpec{
 			Version:     "3.2.13",
 			Replicas:    types.Int32P(1),
 			DoNotPause:  true,
-			StorageType: api.StorageTypeDurable,
+			StorageType: dbapi.StorageTypeDurable,
 			Storage: &core.PersistentVolumeClaimSpec{
 				StorageClassName: types.StringP("standard"),
 				Resources: core.ResourceRequirements{
@@ -254,8 +256,8 @@ func sampleEtcd() api.Etcd {
 					},
 				},
 			},
-			Init: &api.InitSpec{
-				ScriptSource: &api.ScriptSourceSpec{
+			Init: &dbapi.InitSpec{
+				ScriptSource: &dbapi.ScriptSourceSpec{
 					VolumeSource: core.VolumeSource{
 						GitRepo: &core.GitRepoVolumeSource{
 							Repository: "https://github.com/kubedb/etcd-init-scripts.git",
@@ -264,39 +266,42 @@ func sampleEtcd() api.Etcd {
 					},
 				},
 			},
-			TerminationPolicy: api.TerminationPolicyPause,
+			UpdateStrategy: apps.StatefulSetUpdateStrategy{
+				Type: apps.RollingUpdateStatefulSetStrategyType,
+			},
+			TerminationPolicy: dbapi.TerminationPolicyPause,
 		},
 	}
 }
 
-func getAwkwardEtcd() api.Etcd {
+func getAwkwardEtcd() dbapi.Etcd {
 	etcd := sampleEtcd()
 	etcd.Spec.Version = "3.0"
 	return etcd
 }
 
-func editExistingSecret(old api.Etcd) api.Etcd {
+func editExistingSecret(old dbapi.Etcd) dbapi.Etcd {
 	old.Spec.DatabaseSecret = &core.SecretVolumeSource{
 		SecretName: "foo-auth",
 	}
 	return old
 }
 
-func editNonExistingSecret(old api.Etcd) api.Etcd {
+func editNonExistingSecret(old dbapi.Etcd) dbapi.Etcd {
 	old.Spec.DatabaseSecret = &core.SecretVolumeSource{
 		SecretName: "foo-auth-fused",
 	}
 	return old
 }
 
-func editStatus(old api.Etcd) api.Etcd {
-	old.Status = api.EtcdStatus{
-		Phase: api.DatabasePhaseCreating,
+func editStatus(old dbapi.Etcd) dbapi.Etcd {
+	old.Status = dbapi.EtcdStatus{
+		Phase: dbapi.DatabasePhaseCreating,
 	}
 	return old
 }
 
-func editSpecMonitor(old api.Etcd) api.Etcd {
+func editSpecMonitor(old dbapi.Etcd) dbapi.Etcd {
 	old.Spec.Monitor = &mona.AgentSpec{
 		Agent: mona.AgentPrometheusBuiltin,
 		Prometheus: &mona.PrometheusSpec{
@@ -307,14 +312,14 @@ func editSpecMonitor(old api.Etcd) api.Etcd {
 }
 
 // should be failed because more fields required for COreOS Monitoring
-func editSpecInvalidMonitor(old api.Etcd) api.Etcd {
+func editSpecInvalidMonitor(old dbapi.Etcd) dbapi.Etcd {
 	old.Spec.Monitor = &mona.AgentSpec{
 		Agent: mona.AgentCoreOSPrometheus,
 	}
 	return old
 }
 
-func editSpecDoNotPause(old api.Etcd) api.Etcd {
+func editSpecDoNotPause(old dbapi.Etcd) dbapi.Etcd {
 	old.Spec.DoNotPause = false
 	return old
 }
