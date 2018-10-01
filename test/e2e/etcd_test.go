@@ -6,8 +6,8 @@ import (
 
 	"github.com/appscode/go/log"
 	meta_util "github.com/appscode/kutil/meta"
-	catalogapi "github.com/kubedb/apimachinery/apis/catalog/v1alpha1"
-	dbapi "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
+	catalog "github.com/kubedb/apimachinery/apis/catalog/v1alpha1"
+	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	"github.com/kubedb/etcd/test/e2e/framework"
 	"github.com/kubedb/etcd/test/e2e/matcher"
 	. "github.com/onsi/ginkgo"
@@ -21,10 +21,10 @@ var _ = Describe("Etcd", func() {
 	var (
 		err           error
 		f             *framework.Invocation
-		etcd          *dbapi.Etcd
-		garbageEtcd   *dbapi.EtcdList
-		etcdVersion   *catalogapi.EtcdVersion
-		snapshot      *dbapi.Snapshot
+		etcd          *api.Etcd
+		garbageEtcd   *api.EtcdList
+		etcdVersion   *catalog.EtcdVersion
+		snapshot      *api.Snapshot
 		secret        *core.Secret
 		skipMessage   string
 		skipDataCheck bool
@@ -33,7 +33,7 @@ var _ = Describe("Etcd", func() {
 	BeforeEach(func() {
 		f = root.Invoke()
 		etcd = f.Etcd()
-		garbageEtcd = new(dbapi.EtcdList)
+		garbageEtcd = new(api.EtcdList)
 		snapshot = f.Snapshot()
 		etcdVersion = f.EtcdVersion()
 		skipMessage = ""
@@ -75,7 +75,7 @@ var _ = Describe("Etcd", func() {
 		f.EventuallyDormantDatabaseStatus(etcd.ObjectMeta).Should(matcher.HavePaused())
 
 		By("Set DormantDatabase Spec.WipeOut to true")
-		_, err := f.PatchDormantDatabase(etcd.ObjectMeta, func(in *dbapi.DormantDatabase) *dbapi.DormantDatabase {
+		_, err := f.PatchDormantDatabase(etcd.ObjectMeta, func(in *api.DormantDatabase) *api.DormantDatabase {
 			in.Spec.WipeOut = true
 			return in
 		})
@@ -189,7 +189,7 @@ var _ = Describe("Etcd", func() {
 				f.EventuallyEtcdRunning(etcd.ObjectMeta).Should(BeTrue())
 
 				By("Update etcd to set DoNotPause=false")
-				f.PatchEtcd(etcd.ObjectMeta, func(in *dbapi.Etcd) *dbapi.Etcd {
+				f.PatchEtcd(etcd.ObjectMeta, func(in *api.Etcd) *api.Etcd {
 					in.Spec.DoNotPause = false
 					return in
 				})
@@ -220,7 +220,7 @@ var _ = Describe("Etcd", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Check for Succeeded snapshot")
-				f.EventuallySnapshotPhase(snapshot.ObjectMeta).Should(Equal(dbapi.SnapshotPhaseSucceeded))
+				f.EventuallySnapshotPhase(snapshot.ObjectMeta).Should(Equal(api.SnapshotPhaseSucceeded))
 			}
 
 			Context("In Local", func() {
@@ -305,8 +305,8 @@ var _ = Describe("Etcd", func() {
 
 				Context("With Init", func() {
 					BeforeEach(func() {
-						etcd.Spec.Init = &dbapi.InitSpec{
-							ScriptSource: &dbapi.ScriptSourceSpec{
+						etcd.Spec.Init = &api.InitSpec{
+							ScriptSource: &api.ScriptSourceSpec{
 								VolumeSource: core.VolumeSource{
 									GitRepo: &core.GitRepoVolumeSource{
 										Repository: "https://github.com/kubedb/etcd-init-scripts.git",
@@ -322,8 +322,8 @@ var _ = Describe("Etcd", func() {
 
 				Context("Delete One Snapshot keeping others", func() {
 					BeforeEach(func() {
-						etcd.Spec.Init = &dbapi.InitSpec{
-							ScriptSource: &dbapi.ScriptSourceSpec{
+						etcd.Spec.Init = &api.InitSpec{
+							ScriptSource: &api.ScriptSourceSpec{
 								VolumeSource: core.VolumeSource{
 									GitRepo: &core.GitRepoVolumeSource{
 										Repository: "https://github.com/kubedb/etcd-init-scripts.git",
@@ -347,7 +347,7 @@ var _ = Describe("Etcd", func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						By("Check for Succeeded snapshot")
-						f.EventuallySnapshotPhase(snapshot.ObjectMeta).Should(Equal(dbapi.SnapshotPhaseSucceeded))
+						f.EventuallySnapshotPhase(snapshot.ObjectMeta).Should(Equal(api.SnapshotPhaseSucceeded))
 
 						if !skipDataCheck {
 							By("Check for snapshot data")
@@ -369,7 +369,7 @@ var _ = Describe("Etcd", func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						By("Check for Succeeded snapshot")
-						f.EventuallySnapshotPhase(snapshot.ObjectMeta).Should(Equal(dbapi.SnapshotPhaseSucceeded))
+						f.EventuallySnapshotPhase(snapshot.ObjectMeta).Should(Equal(api.SnapshotPhaseSucceeded))
 
 						if !skipDataCheck {
 							By("Check for snapshot data")
@@ -430,8 +430,8 @@ var _ = Describe("Etcd", func() {
 		Context("Initialize", func() {
 			Context("With Script", func() {
 				BeforeEach(func() {
-					etcd.Spec.Init = &dbapi.InitSpec{
-						ScriptSource: &dbapi.ScriptSourceSpec{
+					etcd.Spec.Init = &api.InitSpec{
+						ScriptSource: &api.ScriptSourceSpec{
 							VolumeSource: core.VolumeSource{
 								GitRepo: &core.GitRepoVolumeSource{
 									Repository: "https://github.com/kubedb/etcd-init-scripts.git",
@@ -483,7 +483,7 @@ var _ = Describe("Etcd", func() {
 					f.CreateSnapshot(snapshot)
 
 					By("Check for Succeeded snapshot")
-					f.EventuallySnapshotPhase(snapshot.ObjectMeta).Should(Equal(dbapi.SnapshotPhaseSucceeded))
+					f.EventuallySnapshotPhase(snapshot.ObjectMeta).Should(Equal(api.SnapshotPhaseSucceeded))
 
 					By("Check for snapshot data")
 					f.EventuallySnapshotDataFound(snapshot).Should(BeTrue())
@@ -499,8 +499,8 @@ var _ = Describe("Etcd", func() {
 					if f.StorageClass != "" {
 						etcd.Spec.Storage = f.EtcdPVCSpec()
 					}
-					etcd.Spec.Init = &dbapi.InitSpec{
-						SnapshotSource: &dbapi.SnapshotSourceSpec{
+					etcd.Spec.Init = &api.InitSpec{
+						SnapshotSource: &api.SnapshotSourceSpec{
 							Namespace: snapshot.Namespace,
 							Name:      snapshot.Name,
 						},
@@ -600,8 +600,8 @@ var _ = Describe("Etcd", func() {
 
 			Context("with init Script", func() {
 				BeforeEach(func() {
-					etcd.Spec.Init = &dbapi.InitSpec{
-						ScriptSource: &dbapi.ScriptSourceSpec{
+					etcd.Spec.Init = &api.InitSpec{
+						ScriptSource: &api.ScriptSourceSpec{
 							VolumeSource: core.VolumeSource{
 								GitRepo: &core.GitRepoVolumeSource{
 									Repository: "https://github.com/kubedb/etcd-init-scripts.git",
@@ -644,7 +644,7 @@ var _ = Describe("Etcd", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					By("Checking etcd does not have kubedb.com/initialized annotation")
-					_, err = meta_util.GetString(etcd.Annotations, dbapi.AnnotationInitialized)
+					_, err = meta_util.GetString(etcd.Annotations, api.AnnotationInitialized)
 					Expect(err).To(HaveOccurred())
 				})
 			})
@@ -679,7 +679,7 @@ var _ = Describe("Etcd", func() {
 					f.CreateSnapshot(snapshot)
 
 					By("Check for Succeeded snapshot")
-					f.EventuallySnapshotPhase(snapshot.ObjectMeta).Should(Equal(dbapi.SnapshotPhaseSucceeded))
+					f.EventuallySnapshotPhase(snapshot.ObjectMeta).Should(Equal(api.SnapshotPhaseSucceeded))
 
 					By("Check for snapshot data")
 					f.EventuallySnapshotDataFound(snapshot).Should(BeTrue())
@@ -696,8 +696,8 @@ var _ = Describe("Etcd", func() {
 						etcd.Spec.Storage = f.EtcdPVCSpec()
 					}
 
-					etcd.Spec.Init = &dbapi.InitSpec{
-						SnapshotSource: &dbapi.SnapshotSourceSpec{
+					etcd.Spec.Init = &api.InitSpec{
+						SnapshotSource: &api.SnapshotSourceSpec{
 							Namespace: snapshot.Namespace,
 							Name:      snapshot.Name,
 						},
@@ -734,15 +734,15 @@ var _ = Describe("Etcd", func() {
 					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Etcd has kubedb.com/initialized annotation")
-					_, err = meta_util.GetString(etcd.Annotations, dbapi.AnnotationInitialized)
+					_, err = meta_util.GetString(etcd.Annotations, api.AnnotationInitialized)
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
 			Context("Multiple times with init script", func() {
 				BeforeEach(func() {
-					etcd.Spec.Init = &dbapi.InitSpec{
-						ScriptSource: &dbapi.ScriptSourceSpec{
+					etcd.Spec.Init = &api.InitSpec{
+						ScriptSource: &api.ScriptSourceSpec{
 							VolumeSource: core.VolumeSource{
 								GitRepo: &core.GitRepoVolumeSource{
 									Repository: "https://github.com/kubedb/etcd-init-scripts.git",
@@ -787,7 +787,7 @@ var _ = Describe("Etcd", func() {
 						f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
 
 						By("Checking etcd does not have kubedb.com/initialized annotation")
-						_, err = meta_util.GetString(etcd.Annotations, dbapi.AnnotationInitialized)
+						_, err = meta_util.GetString(etcd.Annotations, api.AnnotationInitialized)
 						Expect(err).To(HaveOccurred())
 					}
 				})
@@ -813,7 +813,7 @@ var _ = Describe("Etcd", func() {
 					f.EventuallySnapshotCount(etcd.ObjectMeta).Should(matcher.MoreThan(3))
 
 					By("Remove Backup Scheduler from Etcd")
-					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *dbapi.Etcd) *dbapi.Etcd {
+					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *api.Etcd) *api.Etcd {
 						in.Spec.BackupSchedule = nil
 						return in
 					})
@@ -854,7 +854,7 @@ var _ = Describe("Etcd", func() {
 					f.CreateSecret(secret)
 
 					By("Update etcd")
-					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *dbapi.Etcd) *dbapi.Etcd {
+					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *api.Etcd) *api.Etcd {
 						in.Spec.BackupSchedule = f.LocalBackupScheduleSpec(secret.Name)
 						return in
 					})
@@ -864,7 +864,7 @@ var _ = Describe("Etcd", func() {
 					f.EventuallySnapshotCount(etcd.ObjectMeta).Should(matcher.MoreThan(3))
 
 					By("Remove Backup Scheduler from Etcd")
-					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *dbapi.Etcd) *dbapi.Etcd {
+					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *api.Etcd) *api.Etcd {
 						in.Spec.BackupSchedule = nil
 						return in
 					})
@@ -887,7 +887,7 @@ var _ = Describe("Etcd", func() {
 					f.CreateSecret(secret)
 
 					By("Update etcd")
-					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *dbapi.Etcd) *dbapi.Etcd {
+					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *api.Etcd) *api.Etcd {
 						in.Spec.BackupSchedule = f.LocalBackupScheduleSpec(secret.Name)
 						return in
 					})
@@ -927,7 +927,7 @@ var _ = Describe("Etcd", func() {
 					f.EventuallySnapshotCount(etcd.ObjectMeta).Should(matcher.MoreThan(5))
 
 					By("Remove Backup Scheduler from Etcd")
-					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *dbapi.Etcd) *dbapi.Etcd {
+					_, err = f.PatchEtcd(etcd.ObjectMeta, func(in *api.Etcd) *api.Etcd {
 						in.Spec.BackupSchedule = nil
 						return in
 					})
