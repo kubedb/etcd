@@ -169,9 +169,9 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
-		Context("DoNotPause", func() {
+		Context("DoNotTerminate", func() {
 			BeforeEach(func() {
-				etcd.Spec.DoNotPause = true
+				etcd.Spec.TerminationPolicy = api.TerminationPolicyDoNotTerminate
 			})
 
 			It("should work successfully", func() {
@@ -188,9 +188,9 @@ var _ = Describe("Etcd", func() {
 				By("Check for Running etcd")
 				f.EventuallyEtcdRunning(etcd.ObjectMeta).Should(BeTrue())
 
-				By("Update etcd to set DoNotPause=false")
+				By("Update etcd to set spec.terminationPolicy = Pause")
 				f.PatchEtcd(etcd.ObjectMeta, func(in *api.Etcd) *api.Etcd {
-					in.Spec.DoNotPause = false
+					in.Spec.TerminationPolicy = api.TerminationPolicyPause
 					return in
 				})
 			})
