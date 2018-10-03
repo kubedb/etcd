@@ -188,17 +188,17 @@ var cases = []struct {
 		false,
 		false,
 	},
-	{"Edit Spec.DoNotPause",
+	{"Edit Spec.TerminationPolicy",
 		requestKind,
 		"foo",
 		"default",
 		admission.Update,
-		editSpecDoNotPause(sampleEtcd()),
+		pauseDatabase(sampleEtcd()),
 		sampleEtcd(),
 		false,
 		true,
 	},
-	{"Delete Etcd when Spec.DoNotPause=true",
+	{"Delete Etcd when Spec.TerminationPolicy=DoNotTerminate",
 		requestKind,
 		"foo",
 		"default",
@@ -208,12 +208,12 @@ var cases = []struct {
 		true,
 		false,
 	},
-	{"Delete Etcd when Spec.DoNotPause=false",
+	{"Delete Etcd when Spec.TerminationPolicy=Pause",
 		requestKind,
 		"foo",
 		"default",
 		admission.Delete,
-		editSpecDoNotPause(sampleEtcd()),
+		pauseDatabase(sampleEtcd()),
 		api.Etcd{},
 		true,
 		true,
@@ -246,7 +246,6 @@ func sampleEtcd() api.Etcd {
 		Spec: api.EtcdSpec{
 			Version:     "3.2.13",
 			Replicas:    types.Int32P(1),
-			DoNotPause:  true,
 			StorageType: api.StorageTypeDurable,
 			Storage: &core.PersistentVolumeClaimSpec{
 				StorageClassName: types.StringP("standard"),
@@ -269,7 +268,7 @@ func sampleEtcd() api.Etcd {
 			UpdateStrategy: apps.StatefulSetUpdateStrategy{
 				Type: apps.RollingUpdateStatefulSetStrategyType,
 			},
-			TerminationPolicy: api.TerminationPolicyPause,
+			TerminationPolicy: api.TerminationPolicyDoNotTerminate,
 		},
 	}
 }
@@ -319,7 +318,7 @@ func editSpecInvalidMonitor(old api.Etcd) api.Etcd {
 	return old
 }
 
-func editSpecDoNotPause(old api.Etcd) api.Etcd {
-	old.Spec.DoNotPause = false
+func pauseDatabase(old api.Etcd) api.Etcd {
+	old.Spec.TerminationPolicy = api.TerminationPolicyPause
 	return old
 }
