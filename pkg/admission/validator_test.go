@@ -156,7 +156,7 @@ var cases = []struct {
 		editNonExistingSecret(sampleEtcd()),
 		sampleEtcd(),
 		false,
-		false,
+		true,
 	},
 	{"Edit Status",
 		requestKind,

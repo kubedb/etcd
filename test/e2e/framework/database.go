@@ -1,35 +1,40 @@
 package framework
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/appscode/kutil/tools/portforward"
-	"github.com/go-bongo/bongo"
+	"github.com/kubedb/etcd/pkg/controller"
 	. "github.com/onsi/gomega"
-	"gopkg.in/mgo.v2/bson"
+	goetcd "go.etcd.io/etcd/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type KubedbTable struct {
-	bongo.DocumentBase `bson:",inline"`
-	FirstName          string
-	LastName           string
+	Key   string
+	Value string
 }
 
+const (
+	EtcdTestKey   = "testKey"
+	EtcdTestValue = "testValue"
+)
+
 func (f *Framework) ForwardPort(meta metav1.ObjectMeta) (*portforward.Tunnel, error) {
-	etcd, err := f.GetEtcd(meta)
+	clientPodName, err := f.GetEtcdClientPod(meta)
 	if err != nil {
 		return nil, err
 	}
 
-	clientPodName := fmt.Sprintf("%v-0", etcd.Name)
 	tunnel := portforward.NewTunnel(
 		f.kubeClient.CoreV1().RESTClient(),
 		f.restConfig,
-		etcd.Namespace,
+		meta.Namespace,
 		clientPodName,
-		27017,
+		controller.EtcdClientPort,
 	)
 	if err := tunnel.ForwardPort(); err != nil {
 		return nil, err
@@ -37,20 +42,27 @@ func (f *Framework) ForwardPort(meta metav1.ObjectMeta) (*portforward.Tunnel, er
 
 	return tunnel, nil
 }
-func (f *Framework) GetEtcdClient(meta metav1.ObjectMeta, tunnel *portforward.Tunnel) (*bongo.Connection, error) {
-	etcd, err := f.GetEtcd(meta)
+func (f *Framework) GetEtcdClient(tunnel *portforward.Tunnel) (goetcd.Client, error) {
+	cfg := goetcd.Config{
+		Endpoints:               []string{fmt.Sprintf("http://127.0.0.1:%v", tunnel.Local)},
+		Transport:               goetcd.DefaultTransport,
+		HeaderTimeoutPerRequest: time.Second,
+	}
+	return goetcd.New(cfg)
+}
+
+func (f *Framework) GetEtcdClientPod(meta metav1.ObjectMeta) (string, error) {
+	pods, err := f.kubeClient.CoreV1().Pods(meta.Namespace).List(metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	user := "root"
-	pass, err := f.GetEtcdRootPassword(etcd)
-
-	config := &bongo.Config{
-		ConnectionString: fmt.Sprintf("etcd://%s:%s@127.0.0.1:%v", user, pass, tunnel.Local),
-		Database:         "kubedb",
+	for _, pod := range pods.Items {
+		if strings.HasPrefix(pod.Name, meta.Name) {
+			return pod.Name, nil
+		}
 	}
-	return bongo.Connect(config)
+	return "", fmt.Errorf("no client pod found for %s", meta.Name)
 }
 
 func (f *Framework) EventuallyDatabaseReady(meta metav1.ObjectMeta) GomegaAsyncAssertion {
@@ -62,15 +74,23 @@ func (f *Framework) EventuallyDatabaseReady(meta metav1.ObjectMeta) GomegaAsyncA
 			}
 			defer tunnel.Close()
 
-			en, err := f.GetEtcdClient(meta, tunnel)
+			fmt.Println("============ port forward success =========")
+			client, err := f.GetEtcdClient(tunnel)
 			if err != nil {
 				return false
 			}
-			defer en.Session.Close()
-
-			if err := en.Session.Ping(); err != nil {
+			kapi := goetcd.NewKeysAPI(client)
+			resp, err := kapi.Set(context.Background(), "/foo", "bar", nil)
+			if err != nil {
 				return false
 			}
+			fmt.Println("Response: ", resp.Action)
+			resp, err = kapi.Delete(context.Background(), "/foo", nil)
+			if err != nil {
+				return false
+			}
+
+			fmt.Println("============ client success =========")
 			return true
 		},
 		time.Minute*15,
@@ -78,7 +98,7 @@ func (f *Framework) EventuallyDatabaseReady(meta metav1.ObjectMeta) GomegaAsyncA
 	)
 }
 
-func (f *Framework) EventuallyInsertDocument(meta metav1.ObjectMeta) GomegaAsyncAssertion {
+func (f *Framework) EventuallySetKey(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() bool {
 			tunnel, err := f.ForwardPort(meta)
@@ -87,25 +107,22 @@ func (f *Framework) EventuallyInsertDocument(meta metav1.ObjectMeta) GomegaAsync
 			}
 			defer tunnel.Close()
 
-			en, err := f.GetEtcdClient(meta, tunnel)
+			fmt.Println("============ port forward success =========")
+			client, err := f.GetEtcdClient(tunnel)
 			if err != nil {
 				return false
 			}
-			defer en.Session.Close()
-
-			if err := en.Session.Ping(); err != nil {
+			kapi := goetcd.NewKeysAPI(client)
+			resp, err := kapi.Set(context.Background(), EtcdTestKey, EtcdTestValue, nil)
+			if err != nil {
 				return false
 			}
-
-			person := &KubedbTable{
-				FirstName: "kubernetes",
-				LastName:  "database",
-			}
-
-			if err := en.Collection("people").Save(person); err != nil {
-				fmt.Println("creation error", err)
+			fmt.Println("Response: ", resp.Action)
+			resp, err = kapi.Get(context.Background(), EtcdTestKey, nil)
+			if err != nil {
 				return false
 			}
+			fmt.Println(resp.Action)
 			return true
 		},
 		time.Minute*15,
@@ -113,7 +130,7 @@ func (f *Framework) EventuallyInsertDocument(meta metav1.ObjectMeta) GomegaAsync
 	)
 }
 
-func (f *Framework) EventuallyDocumentExists(meta metav1.ObjectMeta) GomegaAsyncAssertion {
+func (f *Framework) EventuallyKeyExists(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() bool {
 			tunnel, err := f.ForwardPort(meta)
@@ -122,20 +139,22 @@ func (f *Framework) EventuallyDocumentExists(meta metav1.ObjectMeta) GomegaAsync
 			}
 			defer tunnel.Close()
 
-			en, err := f.GetEtcdClient(meta, tunnel)
+			fmt.Println("============ port forward success =========")
+			client, err := f.GetEtcdClient(tunnel)
 			if err != nil {
 				return false
 			}
-			defer en.Session.Close()
-
-			if err := en.Session.Ping(); err != nil {
+			kapi := goetcd.NewKeysAPI(client)
+			resp, err := kapi.Get(context.Background(), EtcdTestKey, nil)
+			if err != nil {
 				return false
 			}
-			person := &KubedbTable{}
+			fmt.Println("Response: ", resp.Action)
 
-			if err := en.Collection("people").FindOne(bson.M{"firstname": "kubernetes"}, person); err == nil {
+			if resp.Node.Value == EtcdTestValue {
 				return true
 			}
+
 			return false
 		},
 		time.Minute*15,
