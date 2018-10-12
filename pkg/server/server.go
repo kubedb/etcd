@@ -99,15 +99,22 @@ func (c completedConfig) New() (*EtcdServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.ExtraConfig.AdmissionHooks = []hooks.AdmissionHook{
-		&mgAdmsn.EtcdValidator{},
-		&mgAdmsn.EtcdMutator{},
-		&snapshot.SnapshotValidator{},
-		&dormantdatabase.DormantDatabaseValidator{},
-		&namespace.NamespaceValidator{
-			Resources: []string{api.ResourcePluralEtcd},
-		},
+
+	if c.OperatorConfig.EnableMutatingWebhook {
+		c.ExtraConfig.AdmissionHooks = []hooks.AdmissionHook{
+			&mgAdmsn.EtcdMutator{},
+		}
 	}
+	if c.OperatorConfig.EnableValidatingWebhook {
+		c.ExtraConfig.AdmissionHooks = append(c.ExtraConfig.AdmissionHooks,
+			&mgAdmsn.EtcdValidator{},
+			&snapshot.SnapshotValidator{},
+			&dormantdatabase.DormantDatabaseValidator{},
+			&namespace.NamespaceValidator{
+				Resources: []string{api.ResourcePluralEtcd},
+			})
+	}
+
 	ctrl, err := c.OperatorConfig.New()
 	if err != nil {
 		return nil, err
