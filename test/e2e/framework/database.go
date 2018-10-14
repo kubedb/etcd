@@ -42,6 +42,7 @@ func (f *Framework) ForwardPort(meta metav1.ObjectMeta) (*portforward.Tunnel, er
 
 	return tunnel, nil
 }
+
 func (f *Framework) GetEtcdClient(tunnel *portforward.Tunnel) (goetcd.Client, error) {
 	cfg := goetcd.Config{
 		Endpoints:               []string{fmt.Sprintf("http://127.0.0.1:%v", tunnel.Local)},
@@ -74,23 +75,20 @@ func (f *Framework) EventuallyDatabaseReady(meta metav1.ObjectMeta) GomegaAsyncA
 			}
 			defer tunnel.Close()
 
-			fmt.Println("============ port forward success =========")
 			client, err := f.GetEtcdClient(tunnel)
 			if err != nil {
 				return false
 			}
 			kapi := goetcd.NewKeysAPI(client)
-			resp, err := kapi.Set(context.Background(), "/foo", "bar", nil)
+			_, err = kapi.Set(context.Background(), "/foo", "bar", nil)
 			if err != nil {
 				return false
 			}
-			fmt.Println("Response: ", resp.Action)
-			resp, err = kapi.Delete(context.Background(), "/foo", nil)
+			_, err = kapi.Delete(context.Background(), "/foo", nil)
 			if err != nil {
 				return false
 			}
 
-			fmt.Println("============ client success =========")
 			return true
 		},
 		time.Minute*15,
@@ -107,22 +105,19 @@ func (f *Framework) EventuallySetKey(meta metav1.ObjectMeta) GomegaAsyncAssertio
 			}
 			defer tunnel.Close()
 
-			fmt.Println("============ port forward success =========")
 			client, err := f.GetEtcdClient(tunnel)
 			if err != nil {
 				return false
 			}
 			kapi := goetcd.NewKeysAPI(client)
-			resp, err := kapi.Set(context.Background(), EtcdTestKey, EtcdTestValue, nil)
+			_, err = kapi.Set(context.Background(), EtcdTestKey, EtcdTestValue, nil)
 			if err != nil {
 				return false
 			}
-			fmt.Println("Response: ", resp.Action)
-			resp, err = kapi.Get(context.Background(), EtcdTestKey, nil)
+			_, err = kapi.Get(context.Background(), EtcdTestKey, nil)
 			if err != nil {
 				return false
 			}
-			fmt.Println(resp.Action)
 			return true
 		},
 		time.Minute*15,
@@ -139,7 +134,6 @@ func (f *Framework) EventuallyKeyExists(meta metav1.ObjectMeta) GomegaAsyncAsser
 			}
 			defer tunnel.Close()
 
-			fmt.Println("============ port forward success =========")
 			client, err := f.GetEtcdClient(tunnel)
 			if err != nil {
 				return false
@@ -149,8 +143,6 @@ func (f *Framework) EventuallyKeyExists(meta metav1.ObjectMeta) GomegaAsyncAsser
 			if err != nil {
 				return false
 			}
-			fmt.Println("Response: ", resp.Action)
-
 			if resp.Node.Value == EtcdTestValue {
 				return true
 			}

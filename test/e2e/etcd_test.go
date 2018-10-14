@@ -952,7 +952,7 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
-		FContext("StorageType ", func() {
+		Context("StorageType ", func() {
 
 			var shouldRunSuccessfully = func() {
 
@@ -962,10 +962,10 @@ var _ = Describe("Etcd", func() {
 				// Create Etcd
 				createAndWaitForRunning()
 
-				By("Insert Document Inside DB")
+				By("Insert Key into DB")
 				f.EventuallySetKey(etcd.ObjectMeta).Should(BeTrue())
 
-				By("Checking Inserted Document")
+				By("Checking Key Exist")
 				f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 			}
 
@@ -974,6 +974,7 @@ var _ = Describe("Etcd", func() {
 				Context("General Behaviour", func() {
 
 					BeforeEach(func() {
+						skipDataCheck = true
 						etcd.Spec.StorageType = api.StorageTypeEphemeral
 						etcd.Spec.Storage = nil
 						etcd.Spec.TerminationPolicy = api.TerminationPolicyWipeOut

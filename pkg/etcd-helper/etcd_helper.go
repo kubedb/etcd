@@ -1,17 +1,13 @@
 package etcd_helper
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
-	"strings"
-
-	//	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//"k8s.io/client-go/kubernetes"
-	//restclient "k8s.io/client-go/rest"
-	"context"
 	"os/exec"
 	"strconv"
+	"strings"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/kubedb/etcd/pkg/etcdmain"
