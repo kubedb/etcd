@@ -61,6 +61,16 @@ var _ = Describe("Etcd", func() {
 			return
 		}
 
+		By("Check if etcd " + etcd.Name + " exists.")
+		et, err := f.GetEtcd(etcd.ObjectMeta)
+		if err != nil {
+			if kerr.IsNotFound(err) {
+				// Etcd was not created. Hence, rest of cleanup is not necessary.
+				return
+			}
+			Expect(err).NotTo(HaveOccurred())
+		}
+
 		By("Delete etcd")
 		err = f.DeleteEtcd(etcd.ObjectMeta)
 		if err != nil {
@@ -71,19 +81,22 @@ var _ = Describe("Etcd", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		By("Wait for etcd to be paused")
-		f.EventuallyDormantDatabaseStatus(etcd.ObjectMeta).Should(matcher.HavePaused())
+		if et.Spec.TerminationPolicy == api.TerminationPolicyPause {
 
-		By("Set DormantDatabase Spec.WipeOut to true")
-		_, err := f.PatchDormantDatabase(etcd.ObjectMeta, func(in *api.DormantDatabase) *api.DormantDatabase {
-			in.Spec.WipeOut = true
-			return in
-		})
-		Expect(err).NotTo(HaveOccurred())
+			By("Wait for etcd to be paused")
+			f.EventuallyDormantDatabaseStatus(etcd.ObjectMeta).Should(matcher.HavePaused())
 
-		By("Delete Dormant Database")
-		err = f.DeleteDormantDatabase(etcd.ObjectMeta)
-		Expect(err).NotTo(HaveOccurred())
+			By("Set DormantDatabase Spec.WipeOut to true")
+			_, err := f.PatchDormantDatabase(etcd.ObjectMeta, func(in *api.DormantDatabase) *api.DormantDatabase {
+				in.Spec.WipeOut = true
+				return in
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Delete Dormant Database")
+			err = f.DeleteDormantDatabase(etcd.ObjectMeta)
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		By("Wait for etcd resources to be wipedOut")
 		f.EventuallyWipedOut(etcd.ObjectMeta).Should(Succeed())
@@ -140,10 +153,10 @@ var _ = Describe("Etcd", func() {
 					createAndWaitForRunning()
 
 					By("Insert Document Inside DB")
-					f.EventuallyInsertDocument(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallySetKey(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Delete etcd")
 					err = f.DeleteEtcd(etcd.ObjectMeta)
@@ -164,7 +177,7 @@ var _ = Describe("Etcd", func() {
 					f.EventuallyEtcdRunning(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 				})
 			})
 		})
@@ -447,7 +460,7 @@ var _ = Describe("Etcd", func() {
 					createAndWaitForRunning()
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 				})
 
 			})
@@ -471,10 +484,10 @@ var _ = Describe("Etcd", func() {
 					createAndWaitForRunning()
 
 					By("Insert Document Inside DB")
-					f.EventuallyInsertDocument(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallySetKey(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Create Secret")
 					f.CreateSecret(secret)
@@ -510,7 +523,7 @@ var _ = Describe("Etcd", func() {
 					createAndWaitForRunning()
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 				})
 			})
 		})
@@ -523,10 +536,10 @@ var _ = Describe("Etcd", func() {
 					createAndWaitForRunning()
 
 					By("Insert Document Inside DB")
-					f.EventuallyInsertDocument(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallySetKey(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Delete etcd")
 					err = f.DeleteEtcd(etcd.ObjectMeta)
@@ -557,7 +570,7 @@ var _ = Describe("Etcd", func() {
 					f.EventuallyEtcdRunning(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					_, err = f.GetEtcd(etcd.ObjectMeta)
 					Expect(err).NotTo(HaveOccurred())
@@ -570,10 +583,10 @@ var _ = Describe("Etcd", func() {
 					createAndWaitForRunning()
 
 					By("Insert Document Inside DB")
-					f.EventuallyInsertDocument(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallySetKey(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Delete etcd")
 					err = f.DeleteEtcd(etcd.ObjectMeta)
@@ -594,7 +607,7 @@ var _ = Describe("Etcd", func() {
 					f.EventuallyEtcdRunning(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 				})
 			})
 
@@ -617,7 +630,7 @@ var _ = Describe("Etcd", func() {
 					createAndWaitForRunning()
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Delete etcd")
 					err = f.DeleteEtcd(etcd.ObjectMeta)
@@ -638,7 +651,7 @@ var _ = Describe("Etcd", func() {
 					f.EventuallyEtcdRunning(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					etcd, err := f.GetEtcd(etcd.ObjectMeta)
 					Expect(err).NotTo(HaveOccurred())
@@ -667,10 +680,10 @@ var _ = Describe("Etcd", func() {
 					createAndWaitForRunning()
 
 					By("Insert Document Inside DB")
-					f.EventuallyInsertDocument(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallySetKey(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Create Secret")
 					f.CreateSecret(secret)
@@ -707,7 +720,7 @@ var _ = Describe("Etcd", func() {
 					createAndWaitForRunning()
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Delete etcd")
 					err = f.DeleteEtcd(etcd.ObjectMeta)
@@ -731,7 +744,7 @@ var _ = Describe("Etcd", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Etcd has kubedb.com/initialized annotation")
 					_, err = meta_util.GetString(etcd.Annotations, api.AnnotationInitialized)
@@ -758,7 +771,7 @@ var _ = Describe("Etcd", func() {
 					createAndWaitForRunning()
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					for i := 0; i < 3; i++ {
 						By(fmt.Sprintf("%v-th", i+1) + " time running.")
@@ -784,7 +797,7 @@ var _ = Describe("Etcd", func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						By("Checking Inserted Document")
-						f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+						f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 						By("Checking etcd does not have kubedb.com/initialized annotation")
 						_, err = meta_util.GetString(etcd.Annotations, api.AnnotationInitialized)
@@ -894,10 +907,10 @@ var _ = Describe("Etcd", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					By("Insert Document Inside DB")
-					f.EventuallyInsertDocument(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallySetKey(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Count multiple Snapshot Object")
 					f.EventuallySnapshotCount(etcd.ObjectMeta).Should(matcher.MoreThan(3))
@@ -921,7 +934,7 @@ var _ = Describe("Etcd", func() {
 					f.EventuallyEtcdRunning(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Checking Inserted Document")
-					f.EventuallyDocumentExists(etcd.ObjectMeta).Should(BeTrue())
+					f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
 
 					By("Count multiple Snapshot Object")
 					f.EventuallySnapshotCount(etcd.ObjectMeta).Should(matcher.MoreThan(5))
@@ -935,6 +948,55 @@ var _ = Describe("Etcd", func() {
 
 					By("Verify multiple Succeeded Snapshot")
 					f.EventuallyMultipleSnapshotFinishedProcessing(etcd.ObjectMeta).Should(Succeed())
+				})
+			})
+		})
+
+		Context("StorageType ", func() {
+
+			var shouldRunSuccessfully = func() {
+
+				if skipMessage != "" {
+					Skip(skipMessage)
+				}
+				// Create Etcd
+				createAndWaitForRunning()
+
+				By("Insert Key into DB")
+				f.EventuallySetKey(etcd.ObjectMeta).Should(BeTrue())
+
+				By("Checking Key Exist")
+				f.EventuallyKeyExists(etcd.ObjectMeta).Should(BeTrue())
+			}
+
+			Context("Ephemeral", func() {
+
+				Context("General Behaviour", func() {
+
+					BeforeEach(func() {
+						skipDataCheck = true
+						etcd.Spec.StorageType = api.StorageTypeEphemeral
+						etcd.Spec.Storage = nil
+						etcd.Spec.TerminationPolicy = api.TerminationPolicyWipeOut
+					})
+
+					It("should run successfully", shouldRunSuccessfully)
+				})
+
+				Context("With TerminationPolicyPause", func() {
+
+					BeforeEach(func() {
+						etcd.Spec.StorageType = api.StorageTypeEphemeral
+						etcd.Spec.Storage = nil
+						etcd.Spec.TerminationPolicy = api.TerminationPolicyPause
+					})
+
+					It("should reject to create Etcd object", func() {
+
+						By("Creating Etcd: " + etcd.Name)
+						err := f.CreateEtcd(etcd)
+						Expect(err).To(HaveOccurred())
+					})
 				})
 			})
 		})
