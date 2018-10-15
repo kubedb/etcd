@@ -92,3 +92,7 @@ import:
   version: de0752318171da717af4ce24d0a2e8626afaeb11
 - package: github.com/davecgh/go-spew
   version: v1.1.1
+- package: go.etcd.io/etcd
+  version: v3.2.25
+- package: github.com/ugorji/go
+  version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
