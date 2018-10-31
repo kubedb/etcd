@@ -4,9 +4,7 @@ import:
   version: master
 - package: github.com/appscode/pat
 - package: github.com/coreos/prometheus-operator
-  repo: https://github.com/kmodules/prometheus-operator.git
-  vcs: git
-  version: k-1.12
+  version: v0.25.0
 - package: github.com/graymeta/stow
   repo: https://github.com/appscode/stow.git
   vcs: git
@@ -17,7 +15,7 @@ import:
 - package: github.com/spf13/cobra
   version: v0.0.3
 - package: github.com/spf13/pflag
-  version: v1.0.1
+  version: v1.0.3
 - package: k8s.io/api
   version: kubernetes-1.12.0
 - package: k8s.io/apiextensions-apiserver
