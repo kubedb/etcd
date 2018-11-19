@@ -205,7 +205,7 @@ func (c *Controller) ensureBackupScheduler(etcd *api.Etcd) {
 	}
 	// Setup Schedule backup
 	if etcd.Spec.BackupSchedule != nil {
-		err := c.cronController.ScheduleBackup(etcd, etcd.ObjectMeta, etcd.Spec.BackupSchedule, etcdVersion)
+		err := c.cronController.ScheduleBackup(etcd, etcd.Spec.BackupSchedule, etcdVersion)
 		if err != nil {
 			log.Errorln(err)
 			if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
