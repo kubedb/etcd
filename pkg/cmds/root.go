@@ -16,10 +16,6 @@ import (
 	appcatscheme "kmodules.xyz/custom-resources/client/clientset/versioned/scheme"
 )
 
-const (
-	gaTrackingCode = "UA-62096468-20"
-)
-
 func NewRootCmd(version string) *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:               "etcd-operator",
