@@ -39,7 +39,7 @@ import (
 	"github.com/coreos/etcd/proxy/httpproxy"
 	"github.com/coreos/etcd/version"
 	"github.com/coreos/pkg/capnslog"
-	"github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 )
