@@ -1,5 +1,5 @@
-hash: 2d02ade8c328d78340f70d4080caba837d800d606e99a3f88f4e5ee024061457
-updated: 2018-12-05T11:02:03.790484476-08:00
+hash: 7288effe5ee76bef6ad8e093cca42955e716b4f7067a1c18e67041c64de3801f
+updated: 2018-12-06T11:17:16.738899886-08:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -37,7 +37,7 @@ imports:
   - admission/v1beta1
   - registry/admissionreview/v1beta1
 - name: github.com/appscode/kutil
-  version: 239838b6231b8a27a66426e25678351ce50c4cfd
+  version: 72dd199d4e2019a69a7929245f7e17823d753381
   subpackages:
   - admissionregistration/v1beta1
   - apiextensions/v1beta1
@@ -363,7 +363,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 1624edc4454b8682399def8740d46db5e4362ba4
 - name: github.com/kubedb/apimachinery
-  version: edf77e9609ff15a2ad16582deda49eef5a0b80f4
+  version: bd45ce0b7b20bea3aa4029fcbfef4e15350c7bc6
   subpackages:
   - apis
   - apis/authorization
@@ -1051,7 +1051,7 @@ imports:
   - client/clientset/versioned/typed/appcatalog/v1alpha1
   - client/clientset/versioned/typed/appcatalog/v1alpha1/util
 - name: kmodules.xyz/monitoring-agent-api
-  version: c68fa034fbbaeb8c930c17d1ec0790a4ea46bad3
+  version: d12289267b3d7510feb9fac1f5e451d476f23a38
   repo: https://github.com/kmodules/monitoring-agent-api.git
   vcs: git
   subpackages:
