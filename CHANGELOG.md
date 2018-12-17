@@ -1,5 +1,59 @@
 # Change Log
 
+## [0.1.0](https://github.com/kubedb/etcd/tree/0.1.0) (2018-12-17)
+[Full Changelog](https://github.com/kubedb/etcd/compare/0.1.0-rc.2...0.1.0)
+
+**Merged pull requests:**
+
+- Reuse event recorder [\#53](https://github.com/kubedb/etcd/pull/53) ([tamalsaha](https://github.com/tamalsaha))
+- Revendor dependencies [\#52](https://github.com/kubedb/etcd/pull/52) ([tamalsaha](https://github.com/tamalsaha))
+
+## [0.1.0-rc.2](https://github.com/kubedb/etcd/tree/0.1.0-rc.2) (2018-12-06)
+[Full Changelog](https://github.com/kubedb/etcd/compare/0.1.0-rc.1...0.1.0-rc.2)
+
+**Merged pull requests:**
+
+- Use flags.DumpAll [\#51](https://github.com/kubedb/etcd/pull/51) ([tamalsaha](https://github.com/tamalsaha))
+
+## [0.1.0-rc.1](https://github.com/kubedb/etcd/tree/0.1.0-rc.1) (2018-12-02)
+[Full Changelog](https://github.com/kubedb/etcd/compare/0.1.0-rc.0...0.1.0-rc.1)
+
+**Merged pull requests:**
+
+- Apply cleanup [\#50](https://github.com/kubedb/etcd/pull/50) ([tamalsaha](https://github.com/tamalsaha))
+- Set periodic analytics [\#49](https://github.com/kubedb/etcd/pull/49) ([tamalsaha](https://github.com/tamalsaha))
+- Fix analytics [\#48](https://github.com/kubedb/etcd/pull/48) ([the-redback](https://github.com/the-redback))
+- Error out from backup cron job for deprecated db versions [\#47](https://github.com/kubedb/etcd/pull/47) ([the-redback](https://github.com/the-redback))
+- Add CRDS without observation when operator starts [\#46](https://github.com/kubedb/etcd/pull/46) ([the-redback](https://github.com/the-redback))
+- Introduce AppBinding support [\#41](https://github.com/kubedb/etcd/pull/41) ([tamalsaha](https://github.com/tamalsaha))
+
+## [0.1.0-rc.0](https://github.com/kubedb/etcd/tree/0.1.0-rc.0) (2018-10-15)
+[Full Changelog](https://github.com/kubedb/etcd/compare/0.1.0-beta.1...0.1.0-rc.0)
+
+**Merged pull requests:**
+
+- Add etcd and ugorji to glide.yaml [\#45](https://github.com/kubedb/etcd/pull/45) ([tamalsaha](https://github.com/tamalsaha))
+- Various Fixes [\#44](https://github.com/kubedb/etcd/pull/44) ([hossainemruz](https://github.com/hossainemruz))
+- Update kubernetes client libraries to 1.12.0 [\#43](https://github.com/kubedb/etcd/pull/43) ([tamalsaha](https://github.com/tamalsaha))
+- Add validation webhook xray [\#42](https://github.com/kubedb/etcd/pull/42) ([tamalsaha](https://github.com/tamalsaha))
+- Merge ports from service template [\#40](https://github.com/kubedb/etcd/pull/40) ([tamalsaha](https://github.com/tamalsaha))
+- Replace doNotPause with TerminationPolicy = DoNotTerminate [\#39](https://github.com/kubedb/etcd/pull/39) ([tamalsaha](https://github.com/tamalsaha))
+- Pass resources to NamespaceValidator [\#38](https://github.com/kubedb/etcd/pull/38) ([tamalsaha](https://github.com/tamalsaha))
+- Various fixes [\#37](https://github.com/kubedb/etcd/pull/37) ([tamalsaha](https://github.com/tamalsaha))
+- Support Livecycle hook and container probes [\#36](https://github.com/kubedb/etcd/pull/36) ([tamalsaha](https://github.com/tamalsaha))
+- Check if Kubernetes version is supported before running operator [\#35](https://github.com/kubedb/etcd/pull/35) ([tamalsaha](https://github.com/tamalsaha))
+- Update package alias [\#34](https://github.com/kubedb/etcd/pull/34) ([tamalsaha](https://github.com/tamalsaha))
+
+## [0.1.0-beta.1](https://github.com/kubedb/etcd/tree/0.1.0-beta.1) (2018-09-30)
+[Full Changelog](https://github.com/kubedb/etcd/compare/0.1.0-beta.0...0.1.0-beta.1)
+
+**Merged pull requests:**
+
+- Revendor api [\#33](https://github.com/kubedb/etcd/pull/33) ([tamalsaha](https://github.com/tamalsaha))
+- Fix tests [\#32](https://github.com/kubedb/etcd/pull/32) ([tamalsaha](https://github.com/tamalsaha))
+- Revendor api for catalog apigroup [\#31](https://github.com/kubedb/etcd/pull/31) ([tamalsaha](https://github.com/tamalsaha))
+- Use --pull flag with docker build \(\#20\) [\#30](https://github.com/kubedb/etcd/pull/30) ([tamalsaha](https://github.com/tamalsaha))
+
 ## [0.1.0-beta.0](https://github.com/kubedb/etcd/tree/0.1.0-beta.0) (2018-09-20)
 **Merged pull requests:**
 
