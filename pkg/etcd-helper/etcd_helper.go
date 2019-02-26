@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/kubedb/etcd/pkg/etcdmain"
 	"github.com/kubedb/etcd/pkg/util"
+	"github.com/coreos/etcd/clientv3"
 )
 
 func RunEtcdHelper(etcdConf *etcdmain.Config) {

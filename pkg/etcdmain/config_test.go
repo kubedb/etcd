@@ -23,8 +23,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/coreos/etcd/embed"
 	"github.com/ghodss/yaml"
+	"github.com/coreos/etcd/embed"
 )
 
 func TestConfigParsingMemberFlags(t *testing.T) {

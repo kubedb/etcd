@@ -27,6 +27,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/pkg/capnslog"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/coreos/etcd/discovery"
 	"github.com/coreos/etcd/embed"
 	"github.com/coreos/etcd/etcdserver"
@@ -38,9 +41,6 @@ import (
 	"github.com/coreos/etcd/pkg/types"
 	"github.com/coreos/etcd/proxy/httpproxy"
 	"github.com/coreos/etcd/version"
-	"github.com/coreos/pkg/capnslog"
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 )
 

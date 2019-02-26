@@ -21,8 +21,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/coreos/etcd/proxy/tcpproxy"
 	"github.com/spf13/cobra"
+	"github.com/coreos/etcd/proxy/tcpproxy"
 )
 
 var (

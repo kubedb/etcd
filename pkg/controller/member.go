@@ -3,9 +3,9 @@ package controller
 import (
 	"fmt"
 
-	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/kubedb/etcd/pkg/util"
 	"github.com/pkg/errors"
+	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	v1 "k8s.io/api/core/v1"
 )
 

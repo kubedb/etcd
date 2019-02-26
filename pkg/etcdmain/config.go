@@ -24,10 +24,10 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"github.com/coreos/etcd/embed"
 	"github.com/coreos/etcd/pkg/flags"
 	"github.com/coreos/etcd/version"
-	"github.com/ghodss/yaml"
 )
 
 var (

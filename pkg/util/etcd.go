@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/pkg/errors"
+	"github.com/coreos/etcd/clientv3"
 	"k8s.io/apimachinery/pkg/util/rand"
 )
 
