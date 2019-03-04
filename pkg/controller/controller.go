@@ -3,7 +3,7 @@ package controller
 import (
 	"github.com/appscode/go/encoding/json/types"
 	"github.com/appscode/go/log"
-	pcm "github.com/coreos/prometheus-operator/pkg/client/monitoring/v1"
+	pcm "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 	"github.com/kubedb/apimachinery/apis"
 	catalog "github.com/kubedb/apimachinery/apis/catalog/v1alpha1"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"

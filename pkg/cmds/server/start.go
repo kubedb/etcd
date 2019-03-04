@@ -11,6 +11,7 @@ import (
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
+	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/clientcmd"
 )
 
@@ -27,10 +28,14 @@ type EtcdServerOptions struct {
 func NewEtcdServerOptions(out, errOut io.Writer) *EtcdServerOptions {
 	o := &EtcdServerOptions{
 		// TODO we will nil out the etcd storage options.  This requires a later level of k8s.io/apiserver
-		RecommendedOptions: genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, server.Codecs.LegacyCodec(admissionv1beta1.SchemeGroupVersion)),
-		ExtraOptions:       NewExtraOptions(),
-		StdOut:             out,
-		StdErr:             errOut,
+		RecommendedOptions: genericoptions.NewRecommendedOptions(
+			defaultEtcdPathPrefix,
+			server.Codecs.LegacyCodec(admissionv1beta1.SchemeGroupVersion),
+			genericoptions.NewProcessInfo("etcd-operator", meta.Namespace()),
+		),
+		ExtraOptions: NewExtraOptions(),
+		StdOut:       out,
+		StdErr:       errOut,
 	}
 	o.RecommendedOptions.Etcd = nil
 	o.RecommendedOptions.Admission = nil

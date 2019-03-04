@@ -1,7 +1,7 @@
 package controller
 
 import (
-	pcm "github.com/coreos/prometheus-operator/pkg/client/monitoring/v1"
+	pcm "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 	cs "github.com/kubedb/apimachinery/client/clientset/versioned"
 	amc "github.com/kubedb/apimachinery/pkg/controller"
 	"github.com/kubedb/apimachinery/pkg/controller/dormantdatabase"
