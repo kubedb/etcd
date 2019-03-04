@@ -1,5 +1,5 @@
-hash: 1bba5f41ae14c4f17625f815e3a6c826452bcb302735d221710e8cfa63298bbc
-updated: 2019-03-03T23:20:47.91908977-08:00
+hash: cefaa3d7ebfc864a743c88b56c3197edea2eae0f4fe23c9ccc427b820c60e86d
+updated: 2019-03-04T01:09:54.417341486-08:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -136,7 +136,6 @@ imports:
   - etcdserver/etcdserverpb/gw
   - etcdserver/membership
   - etcdserver/stats
-  - integration
   - lease
   - lease/leasehttp
   - lease/leasepb
@@ -162,7 +161,6 @@ imports:
   - pkg/runtime
   - pkg/schedule
   - pkg/srv
-  - pkg/testutil
   - pkg/tlsutil
   - pkg/transport
   - pkg/types
@@ -509,10 +507,6 @@ imports:
   - formatter
 - name: github.com/yudai/golcs
   version: d1c525dea8ce39ea9a783d33cf08932305373f2c
-- name: go.etcd.io/etcd
-  version: 182de1a9e12bd6a7d1bec357361f61b6fbbe4c95
-  subpackages:
-  - client
 - name: go.uber.org/atomic
   version: 8dc6146f7569370a472715e178d8ae31172ee6da
 - name: go.uber.org/multierr

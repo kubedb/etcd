@@ -49,8 +49,8 @@ import:
   version: v1.0.3
 - package: github.com/ugorji/go
   version: bdcc60b419d136a85cdf2e7cbcac34b3f1cd6e57
-- package: go.etcd.io/etcd
-  version: v3.2.25
+- package: github.com/coreos/etcd
+  version: v3.3.10
 - package: golang.org/x/crypto
   version: de0752318171da717af4ce24d0a2e8626afaeb11
 - package: golang.org/x/net

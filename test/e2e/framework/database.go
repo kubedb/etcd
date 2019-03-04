@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	goetcd "github.com/coreos/etcd/client"
 	"github.com/kubedb/etcd/pkg/controller"
 	. "github.com/onsi/gomega"
-	goetcd "go.etcd.io/etcd/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"kmodules.xyz/client-go/tools/portforward"
 )
