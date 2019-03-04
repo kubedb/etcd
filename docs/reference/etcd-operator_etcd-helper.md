@@ -17,7 +17,7 @@ etcd-operator etcd-helper [flags]
       --Config-file string                           Path to the server configuration file
       --advertise-client-urls URLs                   List of this member's client URLs to advertise to the public. (default http://localhost:2379)
       --auth-token string                            Specify auth token specific options. (default "simple")
-      --auto-compaction-retention int                Auto compaction retention for mvcc key value store in hour. 0 means disable auto compaction.
+      --auto-compaction-retention string             Auto compaction retention for mvcc key value store in hour. 0 means disable auto compaction.
       --auto-tls                                     Client TLS using generated certificates
       --ca-file string                               DEPRECATED: Path to the client server TLS CA file.
       --cert-file string                             Path to the client server TLS cert file.
