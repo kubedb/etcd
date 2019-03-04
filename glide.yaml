@@ -48,7 +48,7 @@ import:
 - package: github.com/spf13/pflag
   version: v1.0.3
 - package: github.com/ugorji/go
-  version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
+  version: bdcc60b419d136a85cdf2e7cbcac34b3f1cd6e57
 - package: go.etcd.io/etcd
   version: v3.2.25
 - package: golang.org/x/crypto

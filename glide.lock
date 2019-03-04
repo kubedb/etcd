@@ -1,5 +1,5 @@
-hash: c88f1b534916a34ff4810433d43ce3234c14828b029c044cf41e25fe0dfda850
-updated: 2019-03-03T23:09:20.788647383-08:00
+hash: 1bba5f41ae14c4f17625f815e3a6c826452bcb302735d221710e8cfa63298bbc
+updated: 2019-03-03T23:20:47.91908977-08:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -498,7 +498,7 @@ imports:
   subpackages:
   - wsproxy
 - name: github.com/ugorji/go
-  version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
+  version: bdcc60b419d136a85cdf2e7cbcac34b3f1cd6e57
   subpackages:
   - codec
 - name: github.com/xiang90/probing
