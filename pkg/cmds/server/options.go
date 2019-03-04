@@ -4,8 +4,6 @@ import (
 	"flag"
 	"time"
 
-	"github.com/appscode/kutil/meta"
-	"github.com/appscode/kutil/tools/cli"
 	prom "github.com/coreos/prometheus-operator/pkg/client/monitoring/v1"
 	"github.com/kubedb/apimachinery/apis"
 	cs "github.com/kubedb/apimachinery/client/clientset/versioned"
@@ -18,6 +16,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"kmodules.xyz/client-go/meta"
+	"kmodules.xyz/client-go/tools/cli"
 	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1"
 )
 

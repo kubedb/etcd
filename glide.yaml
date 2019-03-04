@@ -2,11 +2,6 @@ package: github.com/kubedb/etcd
 import:
 - package: github.com/appscode/go
   version: master
-- package: github.com/appscode/kubernetes-webhook-util
-  version: release-9.0
-- package: github.com/appscode/kutil
-  version: release-9.0
-- package: github.com/appscode/pat
 - package: github.com/coreos/prometheus-operator
   version: v0.29.0
 - package: github.com/cpuguy83/go-md2man
@@ -86,10 +81,14 @@ import:
   version: v10.0.0
 - package: k8s.io/kube-aggregator
   version: kubernetes-1.13.0
+- package: k8s.io/kubernetes
+  version: v1.13.0
 - package: k8s.io/kube-openapi
   version: c59034cc13d587f5ef4e85ca0ade0c1866ae8e1d
 - package: k8s.io/utils
   version: 66066c83e385e385ccc3c964b44fd7dcd413d0ed
+- package: kmodules.xyz/client-go
+  version: release-10.0
 - package: kmodules.xyz/custom-resources
   version: release-10.0
 - package: kmodules.xyz/monitoring-agent-api
@@ -97,6 +96,8 @@ import:
 - package: kmodules.xyz/objectstore-api
   version: release-10.0
 - package: kmodules.xyz/offshoot-api
+  version: release-10.0
+- package: kmodules.xyz/webhook-runtime
   version: release-10.0
 - package: sigs.k8s.io/yaml
   version: v1.1.0

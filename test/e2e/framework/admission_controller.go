@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/appscode/go/log"
-	discovery_util "github.com/appscode/kutil/discovery"
 	shell "github.com/codeskyblue/go-sh"
 	"github.com/kubedb/apimachinery/apis"
 	"github.com/kubedb/etcd/pkg/cmds/server"
@@ -20,6 +19,7 @@ import (
 	"k8s.io/client-go/discovery"
 	restclient "k8s.io/client-go/rest"
 	kApi "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
+	discovery_util "kmodules.xyz/client-go/discovery"
 )
 
 var (
