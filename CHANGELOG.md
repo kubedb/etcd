@@ -1,5 +1,23 @@
 # Change Log
 
+## [Unreleased](https://github.com/kubedb/etcd/tree/HEAD)
+
+[Full Changelog](https://github.com/kubedb/etcd/compare/0.2.0...HEAD)
+
+**Merged pull requests:**
+
+- Update Kubernetes client libraries to 1.13.0 [\#58](https://github.com/kubedb/etcd/pull/58) ([tamalsaha](https://github.com/tamalsaha))
+
+## [0.2.0](https://github.com/kubedb/etcd/tree/0.2.0) (2019-02-19)
+[Full Changelog](https://github.com/kubedb/etcd/compare/0.1.0...0.2.0)
+
+**Merged pull requests:**
+
+- Revendor dependencies [\#57](https://github.com/kubedb/etcd/pull/57) ([tamalsaha](https://github.com/tamalsaha))
+- Revendor dependencies : Retry Failed Scheduler Snapshot [\#56](https://github.com/kubedb/etcd/pull/56) ([the-redback](https://github.com/the-redback))
+- Revendor dependencies [\#55](https://github.com/kubedb/etcd/pull/55) ([the-redback](https://github.com/the-redback))
+- Fix app binding [\#54](https://github.com/kubedb/etcd/pull/54) ([tamalsaha](https://github.com/tamalsaha))
+
 ## [0.1.0](https://github.com/kubedb/etcd/tree/0.1.0) (2018-12-17)
 [Full Changelog](https://github.com/kubedb/etcd/compare/0.1.0-rc.2...0.1.0)
 
