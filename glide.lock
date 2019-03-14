@@ -1,5 +1,5 @@
-hash: a1d1e0e11975df933e0fb94ff9850aec72a5e85f37f6e77f1e11cc4b6b0d7557
-updated: 2019-03-12T14:53:09.757019027-07:00
+hash: 26fa7472c6537b1fd03c58879cf55b891c742a3ebba4c39aece2fb890289b6ef
+updated: 2019-03-13T20:18:21.285733835-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -227,7 +227,7 @@ imports:
 - name: github.com/emicklei/go-restful-swagger12
   version: dcef7f55730566d41eae5db10e7d6981829720f6
 - name: github.com/evanphx/json-patch
-  version: 36442dbdb585210f8d5a1b45e67aa323c197d5c4
+  version: 5858425f75500d40c52783dce87d085a483ce135
 - name: github.com/fatih/structs
   version: 878a968ab22548362a09bdb3322f98b00f470d46
 - name: github.com/ghodss/yaml
@@ -341,7 +341,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 1624edc4454b8682399def8740d46db5e4362ba4
 - name: github.com/kubedb/apimachinery
-  version: 947c3c783b4e4a20f6d01282ccc9a61364bf9f65
+  version: 334b49d77d819d1e3a8d90c7a4ea526bbb71f8b4
   subpackages:
   - apis
   - apis/authorization
@@ -1057,7 +1057,7 @@ imports:
 - name: k8s.io/utils
   version: 66066c83e385e385ccc3c964b44fd7dcd413d0ed
 - name: kmodules.xyz/client-go
-  version: b4cd767776cc2c7cc31df6721ebad3cb6f728baa
+  version: 154214c5c84bb24da2fde74b0ac2fb8b115a5f98
   subpackages:
   - admissionregistration/v1beta1
   - apiextensions/v1beta1
