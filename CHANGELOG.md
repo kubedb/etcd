@@ -1,11 +1,13 @@
 # Change Log
 
-## [Unreleased](https://github.com/kubedb/etcd/tree/HEAD)
-
-[Full Changelog](https://github.com/kubedb/etcd/compare/0.2.0...HEAD)
+## [0.3.0](https://github.com/kubedb/etcd/tree/0.3.0) (2019-03-18)
+[Full Changelog](https://github.com/kubedb/etcd/compare/0.2.0...0.3.0)
 
 **Merged pull requests:**
 
+- Keep the label-key-blacklist flag to run command only [\#61](https://github.com/kubedb/etcd/pull/61) ([tamalsaha](https://github.com/tamalsaha))
+- Don't inherit app.kubernetes.io labels from CRD into offshoots [\#60](https://github.com/kubedb/etcd/pull/60) ([tamalsaha](https://github.com/tamalsaha))
+- Add role label to stats service [\#59](https://github.com/kubedb/etcd/pull/59) ([tamalsaha](https://github.com/tamalsaha))
 - Update Kubernetes client libraries to 1.13.0 [\#58](https://github.com/kubedb/etcd/pull/58) ([tamalsaha](https://github.com/tamalsaha))
 
 ## [0.2.0](https://github.com/kubedb/etcd/tree/0.2.0) (2019-02-19)
