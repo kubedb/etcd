@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.4.0](https://github.com/kubedb/etcd/tree/0.4.0) (2019-05-06)
+[Full Changelog](https://github.com/kubedb/etcd/compare/0.3.0...0.4.0)
+
+**Merged pull requests:**
+
+- Revendor dependencies [\#63](https://github.com/kubedb/etcd/pull/63) ([tamalsaha](https://github.com/tamalsaha))
+- Modify mutator validator names [\#62](https://github.com/kubedb/etcd/pull/62) ([iamrz1](https://github.com/iamrz1))
+
 ## [0.3.0](https://github.com/kubedb/etcd/tree/0.3.0) (2019-03-18)
 [Full Changelog](https://github.com/kubedb/etcd/compare/0.2.0...0.3.0)
 
