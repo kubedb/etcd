@@ -44,7 +44,7 @@ func (c *Controller) UpsertDatabaseAnnotation(meta metav1.ObjectMeta, annotation
 	}
 
 	_, _, err = util.PatchEtcd(c.ExtClient.KubedbV1alpha1(), etcd, func(in *api.Etcd) *api.Etcd {
-		in.Annotations = core_util.UpsertMap(etcd.Annotations, annotation)
+		in.Annotations = core_util.UpsertMap(in.Annotations, annotation)
 		return in
 	})
 	return err
