@@ -5,16 +5,16 @@ import (
 	"os"
 
 	"github.com/appscode/go/log"
-	catalog "github.com/kubedb/apimachinery/apis/catalog/v1alpha1"
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	"github.com/kubedb/etcd/test/e2e/framework"
-	"github.com/kubedb/etcd/test/e2e/matcher"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	meta_util "kmodules.xyz/client-go/meta"
 	store "kmodules.xyz/objectstore-api/api/v1"
+	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/etcd/test/e2e/framework"
+	"kubedb.dev/etcd/test/e2e/matcher"
 )
 
 var _ = Describe("Etcd", func() {

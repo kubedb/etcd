@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/appscode/go/encoding/json/types"
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 )
 
 func NewMemberAddEvent(memberName string, cl *api.Etcd) *v1.Event {

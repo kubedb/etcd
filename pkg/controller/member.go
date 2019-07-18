@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
-	"github.com/kubedb/etcd/pkg/util"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
+	"kubedb.dev/etcd/pkg/util"
 )
 
 func (c *Cluster) updateMembers(known util.MemberSet) error {

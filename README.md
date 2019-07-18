@@ -1,4 +1,4 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/kubedb/etcd)](https://goreportcard.com/report/github.com/kubedb/etcd)
+[![Go Report Card](https://goreportcard.com/badge/kubedb.dev/etcd)](https://goreportcard.com/report/kubedb.dev/etcd)
 [![Build Status](https://travis-ci.org/kubedb/etcd.svg?branch=master)](https://travis-ci.org/kubedb/etcd)
 [![codecov](https://codecov.io/gh/kubedb/etcd/branch/master/graph/badge.svg)](https://codecov.io/gh/kubedb/etcd)
 [![Slack](http://slack.kubernetes.io/badge.svg)](http://slack.kubernetes.io/#kubedb)

@@ -3,9 +3,9 @@ package cmds
 import (
 	"log"
 
-	eh "github.com/kubedb/etcd/pkg/etcd-helper"
-	"github.com/kubedb/etcd/pkg/etcdmain"
 	"github.com/spf13/cobra"
+	eh "kubedb.dev/etcd/pkg/etcd-helper"
+	"kubedb.dev/etcd/pkg/etcdmain"
 )
 
 func NewCmdEtcdHelper() *cobra.Command {

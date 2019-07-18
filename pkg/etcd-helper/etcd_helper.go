@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/kubedb/etcd/pkg/etcdmain"
-	"github.com/kubedb/etcd/pkg/util"
+	"kubedb.dev/etcd/pkg/etcdmain"
+	"kubedb.dev/etcd/pkg/util"
 )
 
 func RunEtcdHelper(etcdConf *etcdmain.Config) {
