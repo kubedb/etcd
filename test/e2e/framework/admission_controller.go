@@ -10,8 +10,6 @@ import (
 
 	"github.com/appscode/go/log"
 	shell "github.com/codeskyblue/go-sh"
-	"github.com/kubedb/apimachinery/apis"
-	"github.com/kubedb/etcd/pkg/cmds/server"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -20,6 +18,8 @@ import (
 	restclient "k8s.io/client-go/rest"
 	kApi "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 	discovery_util "kmodules.xyz/client-go/discovery"
+	"kubedb.dev/apimachinery/apis"
+	"kubedb.dev/etcd/pkg/cmds/server"
 )
 
 var (

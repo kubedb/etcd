@@ -4,12 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	"github.com/kubedb/apimachinery/pkg/admission/dormantdatabase"
-	"github.com/kubedb/apimachinery/pkg/admission/namespace"
-	"github.com/kubedb/apimachinery/pkg/admission/snapshot"
-	mgAdmsn "github.com/kubedb/etcd/pkg/admission"
-	"github.com/kubedb/etcd/pkg/controller"
 	admission "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,6 +14,12 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	hooks "kmodules.xyz/webhook-runtime/admission/v1beta1"
 	admissionreview "kmodules.xyz/webhook-runtime/registry/admissionreview/v1beta1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/apimachinery/pkg/admission/dormantdatabase"
+	"kubedb.dev/apimachinery/pkg/admission/namespace"
+	"kubedb.dev/apimachinery/pkg/admission/snapshot"
+	mgAdmsn "kubedb.dev/etcd/pkg/admission"
+	"kubedb.dev/etcd/pkg/controller"
 )
 
 var (

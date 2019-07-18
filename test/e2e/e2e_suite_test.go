@@ -10,10 +10,6 @@ import (
 	"github.com/appscode/go/log"
 	logs "github.com/appscode/go/log/golog"
 	pcm "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
-	cs "github.com/kubedb/apimachinery/client/clientset/versioned"
-	"github.com/kubedb/apimachinery/client/clientset/versioned/scheme"
-	"github.com/kubedb/etcd/pkg/controller"
-	"github.com/kubedb/etcd/test/e2e/framework"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
@@ -22,6 +18,10 @@ import (
 	clientSetScheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	ka "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
+	cs "kubedb.dev/apimachinery/client/clientset/versioned"
+	"kubedb.dev/apimachinery/client/clientset/versioned/scheme"
+	"kubedb.dev/etcd/pkg/controller"
+	"kubedb.dev/etcd/test/e2e/framework"
 )
 
 var (

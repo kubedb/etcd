@@ -5,9 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	"github.com/kubedb/apimachinery/pkg/eventer"
-	etcdutil "github.com/kubedb/etcd/pkg/util"
 	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +13,9 @@ import (
 	core_util "kmodules.xyz/client-go/core/v1"
 	"kmodules.xyz/client-go/tools/analytics"
 	storage "kmodules.xyz/objectstore-api/osm"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/apimachinery/pkg/eventer"
+	etcdutil "kubedb.dev/etcd/pkg/util"
 )
 
 const (

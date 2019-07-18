@@ -3,9 +3,9 @@ package framework
 import (
 	"fmt"
 
-	api "github.com/kubedb/apimachinery/apis/catalog/v1alpha1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	api "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
 )
 
 func (i *Invocation) EtcdVersion() *api.EtcdVersion {

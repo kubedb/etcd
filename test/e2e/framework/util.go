@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/appscode/go/types"
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	store "kmodules.xyz/objectstore-api/api/v1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 )
 
 const (

@@ -2,7 +2,7 @@
 set -xeou pipefail
 
 GOPATH=$(go env GOPATH)
-REPO_ROOT="$GOPATH/src/github.com/kubedb/etcd"
+REPO_ROOT="$GOPATH/src/kubedb.dev/etcd"
 
 export APPSCODE_ENV=prod
 
