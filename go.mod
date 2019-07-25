@@ -3,7 +3,7 @@ module kubedb.dev/etcd
 go 1.12
 
 require (
-	github.com/appscode/go v0.0.0-20190621064509-6b292c9166e3
+	github.com/appscode/go v0.0.0-20190722173419-e454bf744023
 	github.com/cockroachdb/cmux v0.0.0-20170110192607-30d10be49292
 	github.com/codeskyblue/go-sh v0.0.0-20190412065543-76bd3d59ff27
 	github.com/coreos/etcd v3.3.13+incompatible
@@ -29,7 +29,7 @@ require (
 	k8s.io/component-base v0.0.0-20190508223741-40efa6d42997 // indirect
 	k8s.io/kube-aggregator v0.0.0-20190508224022-f9852b6d3a84
 	kmodules.xyz/client-go v0.0.0-20190715080709-7162a6c90b04
-	kmodules.xyz/custom-resources v0.0.0-20190508103408-464e8324c3ec
+	kmodules.xyz/custom-resources v0.0.0-20190723185639-711575c0b8a9
 	kmodules.xyz/monitoring-agent-api v0.0.0-20190513065523-186af167f817
 	kmodules.xyz/objectstore-api v0.0.0-20190718002052-da668b440b0b
 	kmodules.xyz/offshoot-api v0.0.0-20190715115723-36c8fce142c1
