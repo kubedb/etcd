@@ -34,13 +34,12 @@ require (
 	kmodules.xyz/objectstore-api v0.0.0-20190718002052-da668b440b0b
 	kmodules.xyz/offshoot-api v0.0.0-20190715115723-36c8fce142c1
 	kmodules.xyz/webhook-runtime v0.0.0-20190715115250-a84fbf77dd30
-	kubedb.dev/apimachinery v0.0.0-20190718012505-6973f90fefd0
+	kubedb.dev/apimachinery v0.0.0-20190731194925-9549fe9cb250
 )
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest/autorest v0.5.0
 	github.com/hashicorp/go-version => github.com/appscode/go-version v0.0.0-20181001030813-7aba545c679b
-	gopkg.in/robfig/cron.v2 => github.com/appscode/cron v0.0.0-20170717094345-ca60c6d796d4
 	k8s.io/api => k8s.io/api v0.0.0-20190313235455-40a48860b5ab
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190315093550-53c4693659ed
 	k8s.io/apimachinery => github.com/kmodules/apimachinery v0.0.0-20190508045248-a52a97a7a2bf

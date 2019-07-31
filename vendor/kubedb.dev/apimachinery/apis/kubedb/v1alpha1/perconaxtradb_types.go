@@ -10,37 +10,40 @@ import (
 )
 
 const (
-	ResourceCodeEtcd     = "etc"
-	ResourceKindEtcd     = "Etcd"
-	ResourceSingularEtcd = "etcd"
-	ResourcePluralEtcd   = "etcds"
+	ResourceCodePerconaXtraDB     = "px"
+	ResourceKindPerconaXtraDB     = "PerconaXtraDB"
+	ResourceSingularPerconaXtraDB = "perconaxtradb"
+	ResourcePluralPerconaXtraDB   = "perconaxtradbs"
 )
 
-// Etcd defines a Etcd database.
+// PerconaXtraDB defines a percona variation of Mysql database.
 
 // +genclient
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:path=etcds,singular=etcd,shortName=etc,categories={datastore,kubedb,appscode,all}
+// +kubebuilder:resource:path=perconaxtradbs,singular=perconaxtradb,shortName=px,categories={datastore,kubedb,appscode,all}
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-type Etcd struct {
+type PerconaXtraDB struct {
 	metav1.TypeMeta   `json:",inline,omitempty"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              EtcdSpec   `json:"spec,omitempty"`
-	Status            EtcdStatus `json:"status,omitempty"`
+	Spec              PerconaXtraDBSpec   `json:"spec,omitempty"`
+	Status            PerconaXtraDBStatus `json:"status,omitempty"`
 }
 
-type EtcdSpec struct {
-	// Version of Etcd to be deployed.
+type PerconaXtraDBSpec struct {
+	// Version of PerconaXtraDB to be deployed.
 	Version types.StrYo `json:"version"`
 
-	// Number of instances to deploy for a Etcd database.
+	// Number of instances to deploy for PerconaXtraDB
 	Replicas *int32 `json:"replicas,omitempty"`
+
+	// PXC is the cluster specification for PerconaXtraDB Cluster
+	PXC *PXCSpec `json:"pxc,omitempty"`
 
 	// StorageType can be durable (default) or ephemeral
 	StorageType StorageType `json:"storageType,omitempty"`
@@ -55,16 +58,13 @@ type EtcdSpec struct {
 	// +optional
 	Init *InitSpec `json:"init,omitempty"`
 
-	// BackupSchedule spec to specify how database backup will be taken
-	// +optional
-	BackupSchedule *BackupScheduleSpec `json:"backupSchedule,omitempty"`
-
 	// Monitor is used monitor database instance
 	// +optional
 	Monitor *mona.AgentSpec `json:"monitor,omitempty"`
 
-	// etcd cluster TLS configuration
-	TLS *TLSPolicy `json:"tls,omitempty"`
+	// ConfigSource is an optional field to provide custom configuration file for database (i.e custom-mysql.cnf).
+	// If specified, this file will be used as configuration file otherwise default configuration file will be used.
+	ConfigSource *core.VolumeSource `json:"configSource,omitempty"`
 
 	// PodTemplate is an optional configuration for pods used to expose database
 	// +optional
@@ -84,21 +84,25 @@ type EtcdSpec struct {
 	TerminationPolicy TerminationPolicy `json:"terminationPolicy,omitempty"`
 }
 
-type TLSPolicy struct {
-	Member         *MemberSecret `json:"member,omitempty"`
-	OperatorSecret string        `json:"operatorSecret,omitempty"`
+type PXCSpec struct {
+	// Name of the cluster and should be identical on all nodes.
+	ClusterName string `json:"clusterName,omitempty"`
+
+	// Proxysql configuration
+	Proxysql ProxysqlSpec `json:"proxysql,omitempty"`
 }
 
-type MemberSecret struct {
-	// PeerSecret is the secret containing TLS certs used by each etcd member pod
-	// for the communication between etcd peers.
-	PeerSecret string `json:"peerSecret,omitempty"`
-	// ServerSecret is the secret containing TLS certs used by each etcd member pod
-	// for the communication between etcd server and its clients.
-	ServerSecret string `json:"serverSecret,omitempty"`
+type ProxysqlSpec struct {
+	// Number of Proxysql nodes. Currently we support only replicas = 1.
+	// TODO: If replicas > 1, proxysql will be clustered
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// PodTemplate is an optional configuration for pods used to expose proxysql
+	// +optional
+	PodTemplate ofst.PodTemplateSpec `json:"podTemplate,omitempty"`
 }
 
-type EtcdStatus struct {
+type PerconaXtraDBStatus struct {
 	Phase  DatabasePhase `json:"phase,omitempty"`
 	Reason string        `json:"reason,omitempty"`
 	// observedGeneration is the most recent generation observed for this resource. It corresponds to the
@@ -109,9 +113,9 @@ type EtcdStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type EtcdList struct {
+type PerconaXtraDBList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	// Items is a list of Etcd TPR objects
-	Items []Etcd `json:"items,omitempty"`
+	// Items is a list of PerconaXtraDB TPR objects
+	Items []PerconaXtraDB `json:"items,omitempty"`
 }
