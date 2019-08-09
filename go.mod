@@ -3,20 +3,20 @@ module kubedb.dev/etcd
 go 1.12
 
 require (
-	github.com/appscode/go v0.0.0-20190722173419-e454bf744023
+	github.com/appscode/go v0.0.0-20190808133642-1d4ef1f1c1e0
 	github.com/cockroachdb/cmux v0.0.0-20170110192607-30d10be49292
 	github.com/codeskyblue/go-sh v0.0.0-20190412065543-76bd3d59ff27
 	github.com/coreos/etcd v3.3.13+incompatible
-	github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
+	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
-	github.com/coreos/prometheus-operator v0.30.0
+	github.com/coreos/prometheus-operator v0.30.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v0.9.4
-	github.com/sirupsen/logrus v1.4.2
+	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
+	github.com/sirupsen/logrus v1.2.0
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.3
 	gomodules.xyz/stow v0.2.0
@@ -26,19 +26,18 @@ require (
 	k8s.io/apimachinery v0.0.0-20190508063446-a3da69d3723c
 	k8s.io/apiserver v0.0.0-20190516230822-f89599b3f645
 	k8s.io/client-go v11.0.0+incompatible
-	k8s.io/component-base v0.0.0-20190508223741-40efa6d42997 // indirect
-	k8s.io/kube-aggregator v0.0.0-20190508224022-f9852b6d3a84
-	kmodules.xyz/client-go v0.0.0-20190715080709-7162a6c90b04
-	kmodules.xyz/custom-resources v0.0.0-20190723185639-711575c0b8a9
-	kmodules.xyz/monitoring-agent-api v0.0.0-20190513065523-186af167f817
-	kmodules.xyz/objectstore-api v0.0.0-20190718002052-da668b440b0b
-	kmodules.xyz/offshoot-api v0.0.0-20190715115723-36c8fce142c1
-	kmodules.xyz/webhook-runtime v0.0.0-20190715115250-a84fbf77dd30
-	kubedb.dev/apimachinery v0.0.0-20190731194925-9549fe9cb250
+	k8s.io/kube-aggregator v0.0.0-20190314000639-da8327669ac5
+	kmodules.xyz/client-go v0.0.0-20190808141354-bbb9e14f60ab
+	kmodules.xyz/custom-resources v0.0.0-20190808144301-114abf10dfe2
+	kmodules.xyz/monitoring-agent-api v0.0.0-20190808150221-601a4005b7f7
+	kmodules.xyz/objectstore-api v0.0.0-20190808153322-733e8798e8de
+	kmodules.xyz/offshoot-api v0.0.0-20190808152534-e3dc715f844b
+	kmodules.xyz/webhook-runtime v0.0.0-20190808145328-4186c470d56b
+	kubedb.dev/apimachinery v0.13.0-rc.0
 )
 
 replace (
-	github.com/Azure/go-autorest => github.com/Azure/go-autorest/autorest v0.5.0
+	github.com/Azure/go-autorest => github.com/Azure/go-autorest v12.4.2+incompatible
 	github.com/hashicorp/go-version => github.com/appscode/go-version v0.0.0-20181001030813-7aba545c679b
 	k8s.io/api => k8s.io/api v0.0.0-20190313235455-40a48860b5ab
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190315093550-53c4693659ed
@@ -52,4 +51,5 @@ replace (
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30
 	k8s.io/metrics => k8s.io/metrics v0.0.0-20190314001731-1bd6a4002213
 	k8s.io/utils => k8s.io/utils v0.0.0-20190221042446-c2654d5206da
+	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v0.0.0-20190302045857-e85c7b244fd2
 )
