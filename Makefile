@@ -1,3 +1,18 @@
+# Copyright 2019 AppsCode Inc.
+# Copyright 2016 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 SHELL=/bin/bash -o pipefail
 
 # The binary to build (just the basename).
@@ -31,7 +46,8 @@ endif
 ### These variables should not need tweaking.
 ###
 
-SRC_DIRS := cmd pkg test hack/gendocs # directories which hold app source (not vendored)
+SRC_PKGS := cmd pkg
+SRC_DIRS := $(SRC_PKGS) test hack/gendocs # directories which hold app source (not vendored)
 
 DOCKER_PLATFORMS := linux/amd64 linux/arm64
 BIN_PLATFORMS    := $(DOCKER_PLATFORMS) windows/amd64 darwin/amd64
@@ -160,9 +176,21 @@ $(OUTBIN): .go/$(OUTBIN).stamp
 	        commit_timestamp=$(commit_timestamp)                \
 	        ./hack/build.sh                                     \
 	    "
-	@if [ $(COMPRESS) = yes ] && [ $(OS) != windows ]; then \
-		echo "compressing $(OUTBIN)";                       \
-		upx --brute .go/$(OUTBIN);                          \
+	@if [ $(COMPRESS) = yes ] && [ $(OS) != darwin ]; then          \
+		echo "compressing $(OUTBIN)";                               \
+		docker run                                                  \
+		    -i                                                      \
+		    --rm                                                    \
+		    -u $$(id -u):$$(id -g)                                  \
+		    -v $$(pwd):/src                                         \
+		    -w /src                                                 \
+		    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin                \
+		    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin/$(OS)_$(ARCH)  \
+		    -v $$(pwd)/.go/cache:/.cache                            \
+		    --env HTTP_PROXY=$(HTTP_PROXY)                          \
+		    --env HTTPS_PROXY=$(HTTPS_PROXY)                        \
+		    $(BUILD_IMAGE)                                          \
+		    upx --brute /go/$(OUTBIN);                              \
 	fi
 	@if ! cmp -s .go/$(OUTBIN) $(OUTBIN); then \
 	    mv .go/$(OUTBIN) $(OUTBIN);            \
@@ -198,9 +226,13 @@ docker-manifest-%:
 	DOCKER_CLI_EXPERIMENTAL=enabled docker manifest create -a $(IMAGE):$(VERSION_$*) $(foreach PLATFORM,$(DOCKER_PLATFORMS),$(IMAGE):$(VERSION_$*)_$(subst /,_,$(PLATFORM)))
 	DOCKER_CLI_EXPERIMENTAL=enabled docker manifest push $(IMAGE):$(VERSION_$*)
 
-test: $(BUILD_DIRS)
+.PHONY: test
+test: unit-tests e2e-tests
+
+# NB: -t is used to catch ctrl-c interrupt from keyboard and -t will be problematic for CI.
+unit-tests: $(BUILD_DIRS)
 	@docker run                                                 \
-	    -i                                                      \
+	    -it                                                     \
 	    --rm                                                    \
 	    -u $$(id -u):$$(id -g)                                  \
 	    -v $$(pwd):/src                                         \
@@ -215,8 +247,52 @@ test: $(BUILD_DIRS)
 	        ARCH=$(ARCH)                                        \
 	        OS=$(OS)                                            \
 	        VERSION=$(VERSION)                                  \
-	        ./hack/test.sh $(SRC_DIRS)                          \
+	        ./hack/test.sh $(SRC_PKGS)                          \
 	    "
+
+# - e2e-tests can hold both ginkgo args (as GINKGO_ARGS) and program/test args (as TEST_ARGS).
+#       make e2e-tests TEST_ARGS="--selfhosted-operator=false --storageclass=standard" GINKGO_ARGS="--flakeAttempts=2"
+#
+# - Minimalist:
+#       make e2e-tests
+#
+# NB: -t is used to catch ctrl-c interrupt from keyboard and -t will be problematic for CI.
+
+GINKGO_ARGS ?=
+TEST_ARGS   ?=
+
+.PHONY: e2e-tests
+e2e-tests: $(BUILD_DIRS)
+	@docker run                                                 \
+	    -it                                                     \
+	    --rm                                                    \
+	    -u $$(id -u):$$(id -g)                                  \
+	    -v $$(pwd):/src                                         \
+	    -w /src                                                 \
+	    --net=host                                              \
+	    -v $(HOME)/.kube:/.kube                                 \
+	    -v $(HOME)/.credentials:$(HOME)/.credentials            \
+	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin                \
+	    -v $$(pwd)/.go/bin/$(OS)_$(ARCH):/go/bin/$(OS)_$(ARCH)  \
+	    -v $$(pwd)/.go/cache:/.cache                            \
+	    --env HTTP_PROXY=$(HTTP_PROXY)                          \
+	    --env HTTPS_PROXY=$(HTTPS_PROXY)                        \
+	    --env-file=$$(pwd)/hack/config/.env                     \
+	    $(BUILD_IMAGE)                                          \
+	    /bin/bash -c "                                          \
+	        ARCH=$(ARCH)                                        \
+	        OS=$(OS)                                            \
+	        VERSION=$(VERSION)                                  \
+	        DOCKER_REGISTRY=$(REGISTRY)                         \
+	        TAG=$(TAG)                                          \
+	        GINKGO_ARGS='$(GINKGO_ARGS)'                        \
+	        TEST_ARGS='$(TEST_ARGS)'                            \
+	        ./hack/e2e.sh                                       \
+	    "
+
+.PHONY: e2e-parallel
+e2e-parallel:
+	@$(MAKE) e2e-tests GINKGO_ARGS="-p -stream" --no-print-directory
 
 ADDTL_LINTERS   := goconst,gofmt,goimports,unparam
 
@@ -264,28 +340,28 @@ dev: gen fmt push
 ci: lint test build #cover
 
 .PHONY: qa
-qa: docker-manifest
+qa:
 	@if [ "$$APPSCODE_ENV" = "prod" ]; then                                              \
 		echo "Nothing to do in prod env. Are you trying to 'release' binaries to prod?"; \
 		exit 1;                                                                          \
 	fi
-	@if [ "$(version_strategy)" = "git_tag" ]; then           \
+	@if [ "$(version_strategy)" = "tag" ]; then               \
 		echo "Are you trying to 'release' binaries to prod?"; \
 		exit 1;                                               \
 	fi
-	@$(MAKE) clean all-push --no-print-directory
+	@$(MAKE) clean all-push docker-manifest --no-print-directory
 
 .PHONY: release
-release: docker-manifest
+release:
 	@if [ "$$APPSCODE_ENV" != "prod" ]; then      \
 		echo "'release' only works in PROD env."; \
 		exit 1;                                   \
 	fi
-	@if [ "$(version_strategy)" != "git_tag" ]; then                  \
-		echo "'apply_tag' to release binaries and/or docker images."; \
-		exit 1;                                                       \
+	@if [ "$(version_strategy)" != "tag" ]; then                    \
+		echo "apply tag to release binaries and/or docker images."; \
+		exit 1;                                                     \
 	fi
-	@$(MAKE) clean all-push --no-print-directory
+	@$(MAKE) clean all-push docker-manifest --no-print-directory
 
 .PHONY: clean
 clean:
