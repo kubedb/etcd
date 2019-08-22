@@ -20,7 +20,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.3
 	gomodules.xyz/stow v0.2.0
-	google.golang.org/grpc v1.21.1
+	google.golang.org/grpc v1.19.0
 	k8s.io/api v0.0.0-20190503110853-61630f889b3c
 	k8s.io/apiextensions-apiserver v0.0.0-20190516231611-bf6753f2aa24
 	k8s.io/apimachinery v0.0.0-20190508063446-a3da69d3723c
@@ -37,12 +37,12 @@ require (
 )
 
 replace (
+	cloud.google.com/go => cloud.google.com/go v0.34.0
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v12.4.2+incompatible
-	github.com/hashicorp/go-version => github.com/appscode/go-version v0.0.0-20181001030813-7aba545c679b
 	k8s.io/api => k8s.io/api v0.0.0-20190313235455-40a48860b5ab
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190315093550-53c4693659ed
 	k8s.io/apimachinery => github.com/kmodules/apimachinery v0.0.0-20190508045248-a52a97a7a2bf
-	k8s.io/apiserver => github.com/kmodules/apiserver v0.0.0-20190508082252-8397d761d4b5
+	k8s.io/apiserver => github.com/kmodules/apiserver v0.0.0-20190811223248-5a95b2df4348
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.0.0-20190314001948-2899ed30580f
 	k8s.io/cloud-provider => k8s.io/cloud-provider v0.0.0-20190314002645-c892ea32361a
 	k8s.io/component-base => k8s.io/component-base v0.0.0-20190314000054-4a91899592f4

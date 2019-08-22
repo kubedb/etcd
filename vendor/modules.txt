@@ -1,4 +1,4 @@
-# cloud.google.com/go v0.34.0
+# cloud.google.com/go v0.34.0 => cloud.google.com/go v0.34.0
 cloud.google.com/go/compute/metadata
 # contrib.go.opencensus.io/exporter/ocagent v0.4.6
 contrib.go.opencensus.io/exporter/ocagent
@@ -503,7 +503,7 @@ google.golang.org/appengine/internal/remote_api
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.21.1
+# google.golang.org/grpc v1.19.0
 google.golang.org/grpc
 google.golang.org/grpc/codes
 google.golang.org/grpc/credentials
@@ -520,7 +520,6 @@ google.golang.org/grpc/encoding
 google.golang.org/grpc/encoding/proto
 google.golang.org/grpc/internal
 google.golang.org/grpc/internal/backoff
-google.golang.org/grpc/internal/balancerload
 google.golang.org/grpc/internal/binarylog
 google.golang.org/grpc/internal/channelz
 google.golang.org/grpc/internal/envconfig
@@ -646,7 +645,7 @@ k8s.io/apimachinery/pkg/util/httpstream
 k8s.io/apimachinery/pkg/util/httpstream/spdy
 k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme
 k8s.io/apimachinery/third_party/forked/golang/netutil
-# k8s.io/apiserver v0.0.0-20190516230822-f89599b3f645 => github.com/kmodules/apiserver v0.0.0-20190508082252-8397d761d4b5
+# k8s.io/apiserver v0.0.0-20190516230822-f89599b3f645 => github.com/kmodules/apiserver v0.0.0-20190811223248-5a95b2df4348
 k8s.io/apiserver/pkg/server
 k8s.io/apiserver/pkg/server/options
 k8s.io/apiserver/pkg/registry/rest
