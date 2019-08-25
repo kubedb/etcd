@@ -1,5 +1,22 @@
 # Change Log
 
+## [v0.5.0-rc.1](https://github.com/kubedb/etcd/tree/v0.5.0-rc.1) (2019-08-22)
+[Full Changelog](https://github.com/kubedb/etcd/compare/v0.5.0-rc.0...v0.5.0-rc.1)
+
+## [v0.5.0-rc.0](https://github.com/kubedb/etcd/tree/v0.5.0-rc.0) (2019-08-22)
+[Full Changelog](https://github.com/kubedb/etcd/compare/0.4.0...v0.5.0-rc.0)
+
+**Merged pull requests:**
+
+- Update dependencies [\#71](https://github.com/kubedb/etcd/pull/71) ([tamalsaha](https://github.com/tamalsaha))
+- Don't set annotation to AppBinding [\#70](https://github.com/kubedb/etcd/pull/70) ([hossainemruz](https://github.com/hossainemruz))
+- Set database version in AppBinding [\#69](https://github.com/kubedb/etcd/pull/69) ([hossainemruz](https://github.com/hossainemruz))
+- Change package path to kubedb.dev/etcd [\#68](https://github.com/kubedb/etcd/pull/68) ([tamalsaha](https://github.com/tamalsaha))
+- Fix UpsertDatabaseAnnotation\(\) function [\#67](https://github.com/kubedb/etcd/pull/67) ([hossainemruz](https://github.com/hossainemruz))
+- Add install, uninstall and purge command in Makefile [\#66](https://github.com/kubedb/etcd/pull/66) ([hossainemruz](https://github.com/hossainemruz))
+- Add Makefile [\#65](https://github.com/kubedb/etcd/pull/65) ([tamalsaha](https://github.com/tamalsaha))
+- Update to k8s 1.14.0 client libraries using go.mod [\#64](https://github.com/kubedb/etcd/pull/64) ([tamalsaha](https://github.com/tamalsaha))
+
 ## [0.4.0](https://github.com/kubedb/etcd/tree/0.4.0) (2019-05-06)
 [Full Changelog](https://github.com/kubedb/etcd/compare/0.3.0...0.4.0)
 
