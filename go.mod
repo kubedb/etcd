@@ -16,7 +16,7 @@ require (
 	github.com/onsi/gomega v1.5.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
-	github.com/sirupsen/logrus v1.2.0
+	github.com/sirupsen/logrus v1.4.1
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.3
 	gomodules.xyz/stow v0.2.0
@@ -27,13 +27,13 @@ require (
 	k8s.io/apiserver v0.0.0-20190516230822-f89599b3f645
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/kube-aggregator v0.0.0-20190314000639-da8327669ac5
-	kmodules.xyz/client-go v0.0.0-20190808141354-bbb9e14f60ab
+	kmodules.xyz/client-go v0.0.0-20191006173540-91f8ee6b6b4b
 	kmodules.xyz/custom-resources v0.0.0-20190927035424-65fe358bb045
 	kmodules.xyz/monitoring-agent-api v0.0.0-20190808150221-601a4005b7f7
 	kmodules.xyz/objectstore-api v0.0.0-20191006080053-fc8b57fadcf0
 	kmodules.xyz/offshoot-api v0.0.0-20190901210649-de049192326c
 	kmodules.xyz/webhook-runtime v0.0.0-20190808145328-4186c470d56b
-	kubedb.dev/apimachinery v0.13.0-rc.0.0.20191006094625-b862382f971e
+	kubedb.dev/apimachinery v0.13.0-rc.1
 )
 
 replace (
