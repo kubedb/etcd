@@ -2,11 +2,11 @@ package e2e_test
 
 import (
 	"flag"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/appscode/go/homedir"
 	"github.com/appscode/go/log"
 	logs "github.com/appscode/go/log/golog"
 	pcm "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
@@ -16,8 +16,9 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/client-go/kubernetes"
 	clientSetScheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 	ka "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
+	"kmodules.xyz/client-go/tools/clientcmd"
 	cs "kubedb.dev/apimachinery/client/clientset/versioned"
 	"kubedb.dev/apimachinery/client/clientset/versioned/scheme"
 	"kubedb.dev/etcd/pkg/controller"
@@ -25,8 +26,15 @@ import (
 )
 
 var (
-	storageClass string
-
+	storageClass   string
+	kubeconfigPath = func() string {
+		kubecfg := os.Getenv("KUBECONFIG")
+		if kubecfg != "" {
+			return kubecfg
+		}
+		return filepath.Join(homedir.HomeDir(), ".kube", "config")
+	}()
+	kubeContext        = ""
 	prometheusCrdGroup = pcm.Group
 	prometheusCrdKinds = pcm.DefaultCrdKinds
 )
@@ -34,6 +42,8 @@ var (
 func init() {
 	scheme.AddToScheme(clientSetScheme.Scheme)
 
+	flag.StringVar(&kubeconfigPath, "kubeconfig", kubeconfigPath, "Path to kubeconfig file with authorization information (the master location is set by the master flag).")
+	flag.StringVar(&kubeContext, "kube-context", "", "Name of kube context")
 	flag.StringVar(&storageClass, "storageclass", "standard", "Kubernetes StorageClass name")
 	flag.StringVar(&framework.DockerRegistry, "docker-registry", "kubedb", "User provided docker repository")
 	flag.StringVar(&framework.DBVersion, "etcd-version", "3.2.13", "Etcd version")
@@ -61,13 +71,8 @@ func TestE2e(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-
-	userHome := homedir.HomeDir()
-
-	// Kubernetes config
-	kubeconfigPath := filepath.Join(userHome, ".kube/config")
 	By("Using kubeconfig from " + kubeconfigPath)
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	config, err := clientcmd.BuildConfigFromContext(kubeconfigPath, kubeContext)
 	Expect(err).NotTo(HaveOccurred())
 	// raise throttling time. ref: https://github.com/appscode/voyager/issues/640
 	config.Burst = 100
@@ -99,7 +104,6 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-
 	if !framework.SelfHostedOperator {
 		By("Deleting Admission Controller Configs")
 		root.CleanAdmissionConfigs()
