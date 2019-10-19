@@ -22,7 +22,7 @@ github.com/NYTimes/gziphandler
 github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 github.com/PuerkitoBio/urlesc
-# github.com/appscode/go v0.0.0-20191006073906-e3d193d493fc
+# github.com/appscode/go v0.0.0-20191016085057-e186b6c94a3b
 github.com/appscode/go/version
 github.com/appscode/go/runtime
 github.com/appscode/go/log
@@ -37,7 +37,6 @@ github.com/appscode/go/sets
 github.com/appscode/go/analytics
 github.com/appscode/go/net
 github.com/appscode/go/strings
-github.com/appscode/go/os
 github.com/appscode/go/homedir
 github.com/appscode/go/encoding/yaml
 # github.com/appscode/osm v0.12.0
@@ -620,10 +619,10 @@ k8s.io/apimachinery/pkg/runtime/serializer/streaming
 k8s.io/apimachinery/pkg/util/net
 k8s.io/apimachinery/pkg/api/meta
 k8s.io/apimachinery/pkg/util/strategicpatch
+k8s.io/apimachinery/pkg/apis/meta/v1/unstructured
 k8s.io/apimachinery/pkg/runtime/serializer/versioning
 k8s.io/apimachinery/pkg/util/validation
 k8s.io/apimachinery/pkg/util/waitgroup
-k8s.io/apimachinery/pkg/apis/meta/v1/unstructured
 k8s.io/apimachinery/pkg/runtime/serializer/json
 k8s.io/apimachinery/pkg/util/cache
 k8s.io/apimachinery/pkg/util/clock
@@ -980,7 +979,7 @@ k8s.io/kubernetes/pkg/util/hash
 k8s.io/utils/buffer
 k8s.io/utils/trace
 k8s.io/utils/integer
-# kmodules.xyz/client-go v0.0.0-20191006173540-91f8ee6b6b4b
+# kmodules.xyz/client-go v0.0.0-20191016085444-3044854ca625
 kmodules.xyz/client-go/logs
 kmodules.xyz/client-go
 kmodules.xyz/client-go/core/v1
@@ -1014,7 +1013,7 @@ kmodules.xyz/monitoring-agent-api/api/v1
 kmodules.xyz/monitoring-agent-api/agents
 kmodules.xyz/monitoring-agent-api/agents/coreosprometheusoperator
 kmodules.xyz/monitoring-agent-api/agents/prometheusbuiltin
-# kmodules.xyz/objectstore-api v0.0.0-20191006080053-fc8b57fadcf0
+# kmodules.xyz/objectstore-api v0.0.0-20191014210450-ac380fa650a3
 kmodules.xyz/objectstore-api/osm
 kmodules.xyz/objectstore-api/api/v1
 # kmodules.xyz/offshoot-api v0.0.0-20190901210649-de049192326c
@@ -1022,7 +1021,7 @@ kmodules.xyz/offshoot-api/api/v1
 # kmodules.xyz/webhook-runtime v0.0.0-20190808145328-4186c470d56b
 kmodules.xyz/webhook-runtime/admission/v1beta1
 kmodules.xyz/webhook-runtime/registry/admissionreview/v1beta1
-# kubedb.dev/apimachinery v0.13.0-rc.1
+# kubedb.dev/apimachinery v0.13.0-rc.1.0.20191019003934-41a05a4884ae
 kubedb.dev/apimachinery/apis/kubedb/v1alpha1
 kubedb.dev/apimachinery/client/clientset/versioned
 kubedb.dev/apimachinery/pkg/validator
@@ -1089,11 +1088,10 @@ sigs.k8s.io/structured-merge-diff/value
 sigs.k8s.io/structured-merge-diff/schema
 # sigs.k8s.io/yaml v1.1.0
 sigs.k8s.io/yaml
-# stash.appscode.dev/stash v0.9.0-rc.1.0.20191007102408-f5a271be821a
+# stash.appscode.dev/stash v0.9.0-rc.1.0.20191018180359-9ef3cfeba2a2
 stash.appscode.dev/stash/apis/stash/v1beta1
 stash.appscode.dev/stash/client/clientset/versioned
 stash.appscode.dev/stash/client/informers/externalversions
-stash.appscode.dev/stash/apis
 stash.appscode.dev/stash/apis/stash
 stash.appscode.dev/stash/apis/stash/v1alpha1
 stash.appscode.dev/stash/client/clientset/versioned/typed/repositories/v1alpha1
@@ -1101,6 +1099,7 @@ stash.appscode.dev/stash/client/clientset/versioned/typed/stash/v1alpha1
 stash.appscode.dev/stash/client/clientset/versioned/typed/stash/v1beta1
 stash.appscode.dev/stash/client/informers/externalversions/internalinterfaces
 stash.appscode.dev/stash/client/informers/externalversions/stash
+stash.appscode.dev/stash/apis
 stash.appscode.dev/stash/apis/repositories/v1alpha1
 stash.appscode.dev/stash/client/clientset/versioned/scheme
 stash.appscode.dev/stash/client/informers/externalversions/stash/v1alpha1
