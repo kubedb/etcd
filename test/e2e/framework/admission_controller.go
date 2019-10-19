@@ -5,7 +5,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/appscode/go/log"
@@ -14,11 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/discovery"
 	restclient "k8s.io/client-go/rest"
 	kApi "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
-	discovery_util "kmodules.xyz/client-go/discovery"
-	"kubedb.dev/apimachinery/apis"
 	"kubedb.dev/etcd/pkg/cmds/server"
 )
 
@@ -62,23 +58,13 @@ func (f *Framework) EventuallyAPIServiceReady() GomegaAsyncAssertion {
 }
 
 func (f *Framework) RunOperatorAndServer(config *restclient.Config, kubeconfigPath string, stopCh <-chan struct{}) {
-	// Check and set EnableStatusSubresource=true for >=kubernetes v1.11
-	// Todo: remove this part and set EnableStatusSubresource=true automatically when subresources is must in kubedb.
-	discClient, err := discovery.NewDiscoveryClientForConfig(config)
-	Expect(err).NotTo(HaveOccurred())
-	serverVersion, err := discovery_util.GetBaseVersion(discClient)
-	Expect(err).NotTo(HaveOccurred())
-	if strings.Compare(serverVersion, "1.11") >= 0 {
-		apis.EnableStatusSubresource = true
-	}
-
 	sh := shell.NewSession()
 	args := []interface{}{"--minikube", fmt.Sprintf("--docker-registry=%v", DockerRegistry)}
 	SetupServer := filepath.Join("..", "..", "hack", "deploy", "setup.sh")
 
 	By("Creating API server and webhook stuffs")
 	cmd := sh.Command(SetupServer, args...)
-	err = cmd.Run()
+	err := cmd.Run()
 	Expect(err).ShouldNot(HaveOccurred())
 
 	By("Starting Server and Operator")
