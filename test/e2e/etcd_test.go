@@ -1,8 +1,28 @@
+/*
+Copyright The KubeDB Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package e2e_test
 
 import (
 	"fmt"
 	"os"
+
+	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/etcd/test/e2e/framework"
+	"kubedb.dev/etcd/test/e2e/matcher"
 
 	"github.com/appscode/go/log"
 	. "github.com/onsi/ginkgo"
@@ -11,10 +31,6 @@ import (
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	meta_util "kmodules.xyz/client-go/meta"
 	store "kmodules.xyz/objectstore-api/api/v1"
-	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
-	"kubedb.dev/etcd/test/e2e/framework"
-	"kubedb.dev/etcd/test/e2e/matcher"
 )
 
 var _ = Describe("Etcd", func() {
