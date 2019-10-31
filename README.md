@@ -1,5 +1,5 @@
 [![Go Report Card](https://goreportcard.com/badge/kubedb.dev/etcd)](https://goreportcard.com/report/kubedb.dev/etcd)
-[![Build Status](https://travis-ci.org/kubedb/etcd.svg?branch=master)](https://travis-ci.org/kubedb/etcd)
+[![Build Status](https://github.com/kubedb/etcd/workflows/CI/badge.svg)](https://github.com/kubedb/etcd/actions?workflow=CI)
 [![codecov](https://codecov.io/gh/kubedb/etcd/branch/master/graph/badge.svg)](https://codecov.io/gh/kubedb/etcd)
 [![Slack](http://slack.kubernetes.io/badge.svg)](http://slack.kubernetes.io/#kubedb)
 [![mailing list](https://img.shields.io/badge/mailing_list-join-blue.svg)](https://groups.google.com/forum/#!forum/kubedb)
