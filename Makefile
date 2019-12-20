@@ -330,24 +330,51 @@ lint: $(BUILD_DIRS)
 $(BUILD_DIRS):
 	@mkdir -p $@
 
+REGISTRY_SECRET ?=
+
+ifeq ($(strip $(REGISTRY_SECRET)),)
+	IMAGE_PULL_SECRETS =
+else
+	IMAGE_PULL_SECRETS = --set imagePullSecrets[0]=$(REGISTRY_SECRET)
+endif
+
 .PHONY: install
 install:
 	@cd ../installer; \
-	APPSCODE_ENV=dev KUBEDB_OPERATOR_TAG=$(TAG) KUBEDB_CATALOG=etcd ./deploy/kubedb.sh --operator-name=$(BIN) --docker-registry=$(REGISTRY) --image-pull-secret=$(REGISTRY_SECRET)
+	helm install kubedb charts/kubedb \
+		--namespace=kube-system \
+		--set kubedb.registry=$(REGISTRY) \
+		--set kubedb.repository=etcd-operator \
+		--set kubedb.tag=$(TAG) \
+		--set imagePullPolicy=Always \
+		$(IMAGE_PULL_SECRETS); \
+	kubectl wait --for=condition=Ready pods -n kube-system -l app=kubedb --timeout=5m; \
+	kubectl wait --for=condition=Available apiservice -l app=kubedb --timeout=5m; \
+	helm install kubedb-catalog charts/kubedb-catalog \
+		--namespace=kube-system \
+		--set catalog.elasticsearch=false \
+		--set catalog.etcd=true \
+		--set catalog.memcached=false \
+		--set catalog.mongo=false \
+		--set catalog.mysql=false \
+		--set catalog.perconaxtradb=false \
+		--set catalog.pgbouncer=false \
+		--set catalog.postgres=false \
+		--set catalog.proxysql=false \
+		--set catalog.redis=false
 
 .PHONY: uninstall
 uninstall:
 	@cd ../installer; \
-	./deploy/kubedb.sh --uninstall
+	helm uninstall kubedb-catalog --namespace=kube-system || true; \
+	helm uninstall kubedb --namespace=kube-system || true
 
 .PHONY: purge
-purge:
-	@cd ../installer; \
-	./deploy/kubedb.sh --uninstall --purge
+purge: uninstall
+	kubectl delete crds -l app=kubedb
 
 .PHONY: dev
 dev: gen fmt push
-
 
 .PHONY: verify
 verify: verify-modules verify-gen
