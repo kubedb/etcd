@@ -23,7 +23,6 @@ import (
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 
 	"github.com/appscode/go/crypto/rand"
-	"github.com/appscode/go/encoding/json/types"
 	. "github.com/onsi/gomega"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +38,7 @@ func (f *Invocation) Etcd() *api.Etcd {
 			},
 		},
 		Spec: api.EtcdSpec{
-			Version: types.StrYo(DBVersion),
+			Version: DBVersion,
 		},
 	}
 }
