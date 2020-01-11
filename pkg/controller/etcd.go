@@ -71,8 +71,6 @@ func (c *Controller) handleEtcdEvent(event *Event) error {
 				err.Error(),
 			)
 		}
-		// stop Scheduler in case there is any.
-		c.cronController.StopBackupScheduling(etcd.ObjectMeta)
 		log.Errorln(err)
 		return nil
 	}
@@ -217,24 +215,6 @@ func (c *Controller) ensureBackupScheduler(etcd *api.Etcd) {
 		log.Errorln(err)
 		return
 	}
-	// Setup Schedule backup
-	if etcd.Spec.BackupSchedule != nil {
-		err := c.cronController.ScheduleBackup(etcd, etcd.Spec.BackupSchedule, etcdVersion)
-		if err != nil {
-			log.Errorln(err)
-			if ref, rerr := reference.GetReference(clientsetscheme.Scheme, etcd); rerr == nil {
-				c.recorder.Eventf(
-					ref,
-					core.EventTypeWarning,
-					eventer.EventReasonFailedToSchedule,
-					"Failed to schedule snapshot. Reason: %v",
-					err,
-				)
-			}
-		}
-	} else {
-		c.cronController.StopBackupScheduling(etcd.ObjectMeta)
-	}
 }
 
 func (c *Controller) initialize(etcd *api.Etcd) error {
@@ -292,8 +272,6 @@ func (c *Controller) terminate(etcd *api.Etcd) error {
 			return err
 		}
 	}
-
-	c.cronController.StopBackupScheduling(etcd.ObjectMeta)
 
 	if etcd.Spec.Monitor != nil {
 		if _, err := c.deleteMonitor(etcd); err != nil {
