@@ -94,7 +94,7 @@ func (a *EtcdMutator) Admit(req *admission.AdmissionRequest) *admission.Admissio
 	if err != nil {
 		return hookapi.StatusBadRequest(err)
 	}
-	etcdMod, err := setDefaultValues(a.client, a.extClient, obj.(*api.Etcd).DeepCopy())
+	etcdMod, err := setDefaultValues(obj.(*api.Etcd).DeepCopy())
 	if err != nil {
 		return hookapi.StatusForbidden(err)
 	} else if etcdMod != nil {
@@ -112,94 +112,25 @@ func (a *EtcdMutator) Admit(req *admission.AdmissionRequest) *admission.Admissio
 }
 
 // setDefaultValues provides the defaulting that is performed in mutating stage of creating/updating a Etcd database
-func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, etcd *api.Etcd) (runtime.Object, error) {
-	if etcd.Spec.Version == "" {
+func setDefaultValues(extClient cs.Interface, px *api.Etcd) (runtime.Object, error) {
+	if px.Spec.Version == "" {
 		return nil, errors.New(`'spec.version' is missing`)
 	}
 
-	if etcd.Spec.Replicas == nil {
-		etcd.Spec.Replicas = types.Int32P(1)
+	if px.Spec.Halted {
+		if px.Spec.TerminationPolicy == api.TerminationPolicyDoNotTerminate {
+			return nil, errors.New(`Can't halt, since termination policy is 'DoNotTerminate'`)
+		}
+		px.Spec.TerminationPolicy = api.TerminationPolicyHalt
 	}
-	etcd.SetDefaults()
 
-	if err := setDefaultsFromDormantDB(extClient, etcd); err != nil {
-		return nil, err
-	}
+	px.SetDefaults()
 
 	// If monitoring spec is given without port,
 	// set default Listening port
-	setMonitoringPort(etcd)
+	setMonitoringPort(px)
 
-	return etcd, nil
-}
-
-// setDefaultsFromDormantDB takes values from Similar Dormant Database
-func setDefaultsFromDormantDB(extClient cs.Interface, etcd *api.Etcd) error {
-	// Check if DormantDatabase exists or not
-	dormantDb, err := extClient.KubedbV1alpha1().DormantDatabases(etcd.Namespace).Get(etcd.Name, metav1.GetOptions{})
-	if err != nil {
-		if !kerr.IsNotFound(err) {
-			return err
-		}
-		return nil
-	}
-
-	// Check DatabaseKind
-	if value, _ := meta_util.GetStringValue(dormantDb.Labels, api.LabelDatabaseKind); value != api.ResourceKindEtcd {
-		return errors.New(fmt.Sprintf(`invalid Etcd: "%v". Exists DormantDatabase "%v" of different Kind`, etcd.Name, dormantDb.Name))
-	}
-
-	// Check Origin Spec
-	ddbOriginSpec := dormantDb.Spec.Origin.Spec.Etcd
-	ddbOriginSpec.SetDefaults()
-
-	// If DatabaseSecret of new object is not given,
-	// Take dormantDatabaseSecretName
-	if etcd.Spec.DatabaseSecret == nil {
-		etcd.Spec.DatabaseSecret = ddbOriginSpec.DatabaseSecret
-	} else {
-		ddbOriginSpec.DatabaseSecret = etcd.Spec.DatabaseSecret
-	}
-
-	// If Monitoring Spec of new object is not given,
-	// Take Monitoring Settings from Dormant
-	if etcd.Spec.Monitor == nil {
-		etcd.Spec.Monitor = ddbOriginSpec.Monitor
-	} else {
-		ddbOriginSpec.Monitor = etcd.Spec.Monitor
-	}
-
-	// If Backup Scheduler of new object is not given,
-	// Take Backup Scheduler Settings from Dormant
-	if etcd.Spec.BackupSchedule == nil {
-		etcd.Spec.BackupSchedule = ddbOriginSpec.BackupSchedule
-	} else {
-		ddbOriginSpec.BackupSchedule = etcd.Spec.BackupSchedule
-	}
-
-	// Skip checking UpdateStrategy
-	ddbOriginSpec.UpdateStrategy = etcd.Spec.UpdateStrategy
-
-	// Skip checking TerminationPolicy
-	ddbOriginSpec.TerminationPolicy = etcd.Spec.TerminationPolicy
-
-	if !meta_util.Equal(ddbOriginSpec, &etcd.Spec) {
-		diff := meta_util.Diff(ddbOriginSpec, &etcd.Spec)
-		log.Errorf("etcd spec mismatches with OriginSpec in DormantDatabases. Diff: %v", diff)
-		return errors.New(fmt.Sprintf("etcd spec mismatches with OriginSpec in DormantDatabases. Diff: %v", diff))
-	}
-
-	if _, err := meta_util.GetString(etcd.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound &&
-		etcd.Spec.Init != nil &&
-		etcd.Spec.Init.SnapshotSource != nil {
-		etcd.Annotations = core_util.UpsertMap(etcd.Annotations, map[string]string{
-			api.AnnotationInitialized: "",
-		})
-	}
-
-	// Delete  Matching dormantDatabase in Controller
-
-	return nil
+	return px, nil
 }
 
 // Assign Default Monitoring Port if MonitoringSpec Exists
@@ -210,8 +141,11 @@ func setMonitoringPort(etcd *api.Etcd) {
 		if etcd.Spec.Monitor.Prometheus == nil {
 			etcd.Spec.Monitor.Prometheus = &mona.PrometheusSpec{}
 		}
-		if etcd.Spec.Monitor.Prometheus.Port == 0 {
-			etcd.Spec.Monitor.Prometheus.Port = 2379 //api.PrometheusExporterPortNumber
+		if etcd.Spec.Monitor.Prometheus.Exporter == nil {
+			etcd.Spec.Monitor.Prometheus.Exporter = &mona.PrometheusExporterSpec{}
+		}
+		if etcd.Spec.Monitor.Prometheus.Exporter.Port == 0 {
+			etcd.Spec.Monitor.Prometheus.Exporter.Port = 2379 //api.PrometheusExporterPortNumber
 		}
 	}
 }

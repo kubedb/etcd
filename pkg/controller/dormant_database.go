@@ -88,11 +88,10 @@ func (c *Controller) createDormantDatabase(etcd *api.Etcd) (*api.DormantDatabase
 		Spec: api.DormantDatabaseSpec{
 			Origin: api.Origin{
 				PartialObjectMeta: ofst.PartialObjectMeta{
-					Name:              etcd.Name,
-					Namespace:         etcd.Namespace,
-					Labels:            etcd.Labels,
-					Annotations:       etcd.Annotations,
-					CreationTimestamp: etcd.CreationTimestamp,
+					Name:        etcd.Name,
+					Namespace:   etcd.Namespace,
+					Labels:      etcd.Labels,
+					Annotations: etcd.Annotations,
 				},
 				Spec: api.OriginSpec{
 					Etcd: &etcd.Spec,
